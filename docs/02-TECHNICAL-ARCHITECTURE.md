@@ -209,6 +209,7 @@ Conceptual target:
 ```ts
 const manifest = {
   manifest_version: 3,
+  minimum_chrome_version: '116',
   default_locale: 'en',
   name: '__MSG_extensionName__',
   description: '__MSG_extensionDescription__',
@@ -275,21 +276,21 @@ No popup fallback is required for MVP.
 
 ### 6.1 Canonical identity
 
-MVP supports one address namespace: EVM.
+MVP supports two chains: Ethereum Mainnet (id 1) and Base (id 8453). Address identity is chain-aware.
 
 ```ts
+export type SupportedChainId = 1 | 8453;
 export type EvmAddress = `0x${string}`;
-
-export type AddressKey = `evm:${string}`;
+export type AccountKey = `eip155:${SupportedChainId}:${string}`;
 ```
 
 Rules:
 
 - validate with viem `isAddress`;
 - display checksum address using viem `getAddress`;
-- canonical key is `evm:${address.toLowerCase()}`;
-- never use site or chain in the key because the same EVM address can appear on multiple supported chains;
-- store the site where a source was captured separately.
+- canonical key is `eip155:${chainId}:${address.toLowerCase()}`;
+- the chain id is part of the key: the same EVM address on Ethereum Mainnet and Base is NOT the same record and must never be auto-merged;
+- Etherscan maps to chain id 1; BaseScan maps to chain id 8453.
 
 ### 6.2 Record types
 
@@ -304,7 +305,8 @@ export interface ResearchSource {
 }
 
 export interface AddressRecord {
-  key: AddressKey;
+  key: AccountKey;
+  chainId: SupportedChainId;
   address: EvmAddress;
   label: string;
   note: string;
@@ -313,6 +315,29 @@ export interface AddressRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+// UI-authored DTOs. The background generates key, timestamps, and source ids.
+export interface SourceInput {
+  url: string;
+  title: string;
+}
+
+export interface RecordCreateInput {
+  chainId: SupportedChainId;
+  address: EvmAddress;
+  label: string;
+  note: string;
+  confidence: Confidence;
+  sources: SourceInput[];
+}
+
+export interface RecordUpdateInput {
+  key: AccountKey;
+  label: string;
+  note: string;
+  confidence: Confidence;
+  sources: SourceInput[];
+}
 ```
 
 ### 6.3 Validation
@@ -320,12 +345,19 @@ export interface AddressRecord {
 Zod schemas enforce:
 
 - address validity;
+- chain id is 1 or 8453;
 - label length 1–60;
 - note maximum 2,000;
-- source URL must be `https:` or `http:`;
+- at most 50 sources per record;
+- source URL must be `https:` or `http:`, max 2,048 chars;
 - source title maximum 300;
-- timestamps are ISO strings;
+- page title max 300, page URL max 2,048;
+- at most 500 account keys per request;
+- import file max 10 MB;
+- timestamps are ISO 8601 strings (offset allowed);
 - import envelope version is supported.
+
+The background owns `key`, `chainId`, `createdAt`, `updatedAt`, and source `id`. Source ids use `crypto.randomUUID()`. The UI submits only `RecordCreateInput` / `RecordUpdateInput`.
 
 Do not render imported HTML. All user text is displayed as text content.
 
@@ -394,18 +426,24 @@ Required requests:
 
 ```ts
 export type RequestMessage =
-  | { type: 'PAGE_CONTEXT_SET'; payload: PageContext }
-  | { type: 'PAGE_CONTEXT_GET' }
-  | { type: 'RECORDS_GET_MANY'; payload: { keys: AddressKey[] } }
+  | { type: 'PAGE_CONTEXT_SET'; payload: PageContextInput }
+  | { type: 'PAGE_CONTEXT_GET'; payload: { tabId: number } }
+  | { type: 'RECORDS_GET_MANY'; payload: { keys: AccountKey[] } }
   | { type: 'RECORD_LIST' }
-  | { type: 'RECORD_GET'; payload: { key: AddressKey } }
-  | { type: 'RECORD_UPSERT'; payload: AddressRecordInput }
-  | { type: 'RECORD_DELETE'; payload: { key: AddressKey } }
+  | { type: 'RECORD_GET'; payload: { key: AccountKey } }
+  | { type: 'RECORD_CREATE'; payload: RecordCreateInput }
+  | { type: 'RECORD_UPDATE'; payload: RecordUpdateInput }
+  | { type: 'RECORD_DELETE'; payload: { key: AccountKey } }
   | { type: 'DATA_EXPORT' }
-  | { type: 'DATA_IMPORT'; payload: TraceMemoExport }
+  | { type: 'DATA_IMPORT'; payload: { data: TraceMemoExport } }
+  | { type: 'DATA_IMPORT_PREVIEW'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
-  | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> };
+  | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
+  | { type: 'OPEN_RECORD'; payload: { key: AccountKey } };
+
+type ImportPreview = { total: number; created: number; updated: number; skipped: number };
+type ImportResult = { created: number; updated: number; skipped: number; invalid: number };
 ```
 
 Response envelope:
@@ -418,21 +456,30 @@ type ResponseMessage<T> =
 
 Never include stack traces or user record content in production error messages.
 
-### 8.1 Current page state
+### 8.2 Sender authorization
 
-The content script sends a `PageContext` after initial scan and meaningful DOM changes:
+Every message is schema-validated AND authorized by sender. `sender.id` must equal `chrome.runtime.id`. Content scripts (a real `sender.tab.id` and a `sender.tab.url` on etherscan.io/basescan.org) may only send `PAGE_CONTEXT_SET`, `RECORDS_GET_MANY`, and `OPEN_RECORD`. The side panel (`sender.url` under the extension's own side-panel URL) may send record CRUD, import/export, clear, settings, `PAGE_CONTEXT_GET`, and `RECORDS_GET_MANY`. Content scripts may not call `DATA_IMPORT`, `DATA_CLEAR`, `DATA_EXPORT`, or any write outside the current page. `PAGE_CONTEXT_SET` always uses `sender.tab.id`; client-supplied tab ids are ignored.
+
+### 8.1 Per-tab page context
+
+The content script sends a `PageContextInput` after initial scan and meaningful DOM changes. The background takes the real tab id from `MessageSender.tab.id` and never trusts client-supplied tab ids:
 
 ```ts
-interface PageContext {
+interface PageContextInput {
   tabUrl: string;
   pageTitle: string;
   site: 'etherscan' | 'basescan';
-  addresses: EvmAddress[];
+  chainId: SupportedChainId;
+  accountKeys: AccountKey[];
   observedAt: string;
+}
+
+interface PageContext extends PageContextInput {
+  tabId: number;
 }
 ```
 
-The background stores the latest page context in `chrome.storage.session` when available, otherwise in memory with a safe empty-state fallback. Research records remain in IndexedDB.
+The background stores page context per tab in `chrome.storage.session` under `tracememo-page-context:<tabId>` and removes it when the tab closes (`chrome.tabs.onRemoved`). The side panel reads the active tab id via `chrome.tabs.query` (no `tabs` permission) and requests that tab's context, so state never bleeds across tabs. Research records remain in IndexedDB.
 
 ## 9. Explorer adapter
 
@@ -562,19 +609,20 @@ tracememo-backup-YYYY-MM-DD.json
 1. read file as text;
 2. enforce a 10 MB maximum;
 3. parse JSON;
-4. validate envelope and every record;
-5. calculate create, update, skip, and invalid counts;
-6. show preview;
+4. validate the envelope and every record strictly;
+5. if ANY record is invalid, reject the whole file with no database writes;
+6. otherwise run a dry-run preview returning create/update/skip counts;
 7. user confirms;
 8. run one Dexie transaction;
 9. return result counts;
 10. refresh annotations and library.
 
+Import is all-or-nothing: a single invalid record rejects the entire file. There is no skip-invalid path.
+
 Conflict rule:
 
 - same canonical key: keep the record with the newer valid `updatedAt`;
-- equal timestamps: keep the existing local record;
-- invalid record: skip and report count without exposing full content in logs.
+- equal timestamps: keep the existing local record.
 
 ## 12. Logging and error handling
 

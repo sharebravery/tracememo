@@ -5,6 +5,10 @@
 
 ## Global rule
 
+Records are chain-aware: the canonical key is `eip155:<chainId>:<lowercase address>` (Ethereum Mainnet = 1, Base = 8453). The same address on different chains is never merged. Page context is isolated per Chrome tab.
+
+The canonical command set (used by CI and every milestone's acceptance) is: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm build`, and `pnpm zip`. Do not introduce conflicting commands or version pins.
+
 Before every milestone:
 
 1. read the PRD sections relevant to the milestone;
@@ -140,7 +144,7 @@ Do not add BaseScan until Etherscan fixture and real-page smoke tests pass.
 
 ### Goal
 
-Prove cross-explorer continuity and finish the evidence-backed workflow.
+Prove a consistent workflow across Etherscan and BaseScan (chain-specific records, no cross-chain merge) and finish the evidence-backed workflow.
 
 ### Tasks
 
@@ -156,7 +160,8 @@ Prove cross-explorer continuity and finish the evidence-backed workflow.
 
 ### Acceptance criteria
 
-- [ ] one record works on both explorers.
+- [ ] a record saved on Ethereum does not appear on Base for the same address, and vice versa.
+- [ ] the same address can be saved separately on each chain.
 - [ ] sources are clearly separated from the user's conclusion.
 - [ ] confidence defaults to `unverified`.
 - [ ] no confidence state looks like an official platform verification.
