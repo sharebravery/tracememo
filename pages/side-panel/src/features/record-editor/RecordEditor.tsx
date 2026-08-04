@@ -1,30 +1,46 @@
 import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
 import { sendMessage } from '../../messaging';
-import { isEvmAddress } from '@extension/shared';
+import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD } from '@extension/shared';
 import { useState } from 'react';
-import type { AddressRecord, AddressRecordInput, Confidence, EvmAddress, ResearchSource } from '@extension/shared';
+import type {
+  AddressRecord,
+  Confidence,
+  EvmAddress,
+  RecordCreateInput,
+  RecordUpdateInput,
+  SourceInput,
+  SupportedChainId,
+} from '@extension/shared';
 
 interface RecordEditorProps {
+  mode: 'create' | 'update';
   initial?: AddressRecord;
-  /** Prefilled address when creating from the Current Page view (not editable here). */
+  initialChainId?: SupportedChainId;
   initialAddress?: EvmAddress;
-  /** Prefilled sources, e.g. the current page captured by the content script. */
-  defaultSources?: ResearchSource[];
+  defaultSources?: SourceInput[];
   onSaved: () => void;
   onCancel: () => void;
 }
 
-const LABEL_MAX = 60;
-const NOTE_MAX = 2000;
-
-export const RecordEditor = ({ initial, initialAddress, defaultSources, onSaved, onCancel }: RecordEditorProps) => {
-  const isEdit = Boolean(initial);
+export const RecordEditor = ({
+  mode,
+  initial,
+  initialChainId,
+  initialAddress,
+  defaultSources,
+  onSaved,
+  onCancel,
+}: RecordEditorProps) => {
+  const isEdit = mode === 'update';
+  const [chainId, setChainId] = useState<SupportedChainId>(initial?.chainId ?? initialChainId ?? 1);
   const [address, setAddress] = useState(initial?.address ?? initialAddress ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
   const [confidence, setConfidence] = useState<Confidence>(initial?.confidence ?? 'unverified');
-  const [sources, setSources] = useState<ResearchSource[]>(initial?.sources ?? defaultSources ?? []);
+  const [sources, setSources] = useState<SourceInput[]>(
+    initial?.sources.map(s => ({ url: s.url, title: s.title })) ?? defaultSources ?? [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -38,6 +54,9 @@ export const RecordEditor = ({ initial, initialAddress, defaultSources, onSaved,
     }
     if (note.length > NOTE_MAX) {
       return `Note must be ${NOTE_MAX} characters or fewer.`;
+    }
+    if (sources.length > SOURCE_MAX_PER_RECORD) {
+      return `A record may have at most ${SOURCE_MAX_PER_RECORD} sources.`;
     }
     return null;
   };
@@ -53,14 +72,26 @@ export const RecordEditor = ({ initial, initialAddress, defaultSources, onSaved,
     setError(null);
 
     try {
-      const input: AddressRecordInput = {
-        address: address as EvmAddress,
-        label: label.trim(),
-        note,
-        confidence,
-        sources,
-      };
-      await sendMessage({ type: 'RECORD_UPSERT', payload: input });
+      if (isEdit && initial) {
+        const input: RecordUpdateInput = {
+          key: initial.key,
+          label: label.trim(),
+          note,
+          confidence,
+          sources,
+        };
+        await sendMessage({ type: 'RECORD_UPDATE', payload: input });
+      } else {
+        const input: RecordCreateInput = {
+          chainId,
+          address: address as EvmAddress,
+          label: label.trim(),
+          note,
+          confidence,
+          sources,
+        };
+        await sendMessage({ type: 'RECORD_CREATE', payload: input });
+      }
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save record.');
@@ -81,6 +112,27 @@ export const RecordEditor = ({ initial, initialAddress, defaultSources, onSaved,
       </div>
 
       <div className="flex flex-col gap-1">
+        <label htmlFor="tracememo-chain" className="text-xs font-medium text-slate-600">
+          Chain
+        </label>
+        <select
+          id="tracememo-chain"
+          value={chainId}
+          onChange={event => setChainId(Number(event.target.value) as SupportedChainId)}
+          disabled={isEdit}
+          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500">
+          {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
+            <option key={id} value={id}>
+              {CHAIN_LABELS[id]}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-slate-400">
+          A record is specific to one chain. The same address on Ethereum and Base is separate.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label htmlFor="tracememo-address" className="text-xs font-medium text-slate-600">
           Address
         </label>
@@ -95,7 +147,9 @@ export const RecordEditor = ({ initial, initialAddress, defaultSources, onSaved,
           placeholder="0x…"
           className="w-full rounded border border-slate-300 px-2 py-1.5 font-mono text-xs read-only:bg-slate-100 read-only:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
-        {isEdit && <p className="text-[11px] text-slate-400">The address cannot be changed on an existing record.</p>}
+        {isEdit && (
+          <p className="text-[11px] text-slate-400">The address and chain cannot be changed on an existing record.</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">

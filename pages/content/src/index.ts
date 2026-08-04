@@ -3,10 +3,10 @@ import { removeAnnotations } from './annotation/remove-labels.js';
 import { renderAnnotations } from './annotation/render-label.js';
 import { scanAddresses } from './detection/scan-addresses.js';
 import { sendMessage } from './messaging.js';
-import { toAddressKey } from '@extension/shared';
+import { toAccountKey } from '@extension/shared';
 import { DEFAULT_SETTINGS_STATE, SETTINGS_STORAGE_KEY } from '@extension/storage';
 import type { ExplorerSite } from './adapter/sites.js';
-import type { AddressKey, AddressRecord, EvmAddress, PageContext } from '@extension/shared';
+import type { AccountKey, AddressRecord, PageContextInput, SupportedChainId } from '@extension/shared';
 
 const DEBOUNCE_MS = 300;
 const MAX_ADAPTER_ERRORS = 5;
@@ -14,28 +14,29 @@ const DATA_ATTR = 'data-tracememo';
 const OBSERVER_OPTIONS: MutationObserverInit = { childList: true, subtree: true, characterData: true };
 
 let site: ExplorerSite | null = null;
-let recordMap = new Map<AddressKey, AddressRecord>();
+let chainId: SupportedChainId = 1;
+let recordMap = new Map<AccountKey, AddressRecord>();
 let observer: MutationObserver | undefined;
 let rescanTimer: ReturnType<typeof setTimeout> | undefined;
 let adapterErrors = 0;
 let running = false;
 let annotationsEnabled = DEFAULT_SETTINGS_STATE.annotationsEnabled;
 
-const buildPageContext = (addresses: EvmAddress[]): PageContext => ({
-  tabUrl: location.href,
-  pageTitle: document.title,
+const buildPageContext = (accountKeys: AccountKey[]): PageContextInput => ({
+  tabUrl: location.href.slice(0, 2048),
+  pageTitle: document.title.slice(0, 300),
   site: (site as ExplorerSite).id,
-  addresses,
+  chainId,
+  accountKeys,
   observedAt: new Date().toISOString(),
 });
 
-const syncRecords = async (addresses: EvmAddress[]): Promise<void> => {
-  if (addresses.length === 0) {
+const syncRecords = async (accountKeys: AccountKey[]): Promise<void> => {
+  if (accountKeys.length === 0) {
     recordMap = new Map();
     return;
   }
-  const keys = addresses.map(toAddressKey);
-  const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys } });
+  const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: accountKeys } });
   recordMap = new Map(records.map(record => [record.key, record]));
 };
 
@@ -44,6 +45,7 @@ const render = (): void => {
   observer.disconnect();
   try {
     renderAnnotations(document.body, {
+      chainId,
       hasRecord: key => recordMap.get(key),
       onOpen: key => {
         void sendMessage({ type: 'OPEN_RECORD', payload: { key } }).catch(() => {
@@ -70,8 +72,9 @@ const rescan = async (): Promise<void> => {
   running = true;
   try {
     const addresses = scanAddresses(document.body);
-    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(addresses) });
-    await syncRecords(addresses);
+    const accountKeys = addresses.map(address => toAccountKey(chainId, address));
+    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(accountKeys) });
+    await syncRecords(accountKeys);
     render();
   } catch {
     adapterErrors += 1;
@@ -100,7 +103,6 @@ const setAnnotationsEnabled = (enabled: boolean): void => {
     removeAnnotations(document.body);
     return;
   }
-  // Re-enabled: resume observing and rescan immediately.
   observer?.observe(document.body, OBSERVER_OPTIONS);
   void rescan();
 };
@@ -110,7 +112,6 @@ const refreshAnnotationsEnabled = async (): Promise<void> => {
     const data = await chrome.storage.local.get(SETTINGS_STORAGE_KEY);
     annotationsEnabled = data[SETTINGS_STORAGE_KEY]?.annotationsEnabled ?? DEFAULT_SETTINGS_STATE.annotationsEnabled;
   } catch {
-    // Default to enabled if storage is unavailable.
     annotationsEnabled = DEFAULT_SETTINGS_STATE.annotationsEnabled;
   }
 };
@@ -122,17 +123,17 @@ const onStorageChanged = (changes: { [key: string]: chrome.storage.StorageChange
 };
 
 /**
- * Entry point. Detects the site, scans once, renders annotations, and starts a
- * debounced MutationObserver for dynamic content. Annotations honor the
- * `annotationsEnabled` setting and are removed immediately when disabled.
- * Fails safely: repeated adapter errors halt the observer without breaking
- * page controls.
+ * Entry point. Detects the site (and chain id), scans once, renders
+ * chain-aware annotations, and starts a debounced MutationObserver for dynamic
+ * content. Annotations honor the `annotationsEnabled` setting and are removed
+ * immediately when disabled. Fails safely: repeated adapter errors halt the
+ * observer without breaking page controls.
  */
 export const startContentScript = (): void => {
   site = detectSite(location.hostname);
   if (!site) return;
+  chainId = site.chainId;
 
-  // Mark the document so TraceMemo-owned nodes are easy to identify.
   document.documentElement.setAttribute(DATA_ATTR, 'host');
 
   observer = new MutationObserver(() => scheduleRescan());

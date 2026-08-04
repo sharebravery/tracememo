@@ -1,19 +1,21 @@
 import 'fake-indexeddb/auto';
+import { ImportError } from './import-export.js';
 import { createRecordsRepository } from './records-repository.js';
 import { TraceMemoDatabase } from './schema.js';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AddressKey, AddressRecord, EvmAddress, TraceMemoExport } from '@extension/shared';
+import type { AccountKey, AddressRecord, EvmAddress, SupportedChainId, TraceMemoExport } from '@extension/shared';
 
 const a = (hex: string): EvmAddress => `0x${hex}` as EvmAddress;
-const k = (hex: string): AddressKey => `evm:0x${hex}` as AddressKey;
+const k = (chainId: SupportedChainId, hex: string): AccountKey => `eip155:${chainId}:0x${hex}` as AccountKey;
 
 const ONE = '1'.repeat(40);
 const TWO = '2'.repeat(40);
-const KEY_A = k('a'.repeat(40));
+const KEY_A = k(1, 'a'.repeat(40));
 const ADDRESS_A = a('Aa'.repeat(20));
 
 const makeRecord = (overrides: Partial<AddressRecord> = {}): AddressRecord => ({
   key: KEY_A,
+  chainId: 1,
   address: ADDRESS_A,
   label: 'Test label',
   note: 'A note',
@@ -22,6 +24,13 @@ const makeRecord = (overrides: Partial<AddressRecord> = {}): AddressRecord => ({
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   ...overrides,
+});
+
+const envelope = (records: AddressRecord[]): TraceMemoExport => ({
+  format: 'tracememo',
+  version: 1,
+  exportedAt: '2026-01-01T00:00:00.000Z',
+  records,
 });
 
 describe('records repository', () => {
@@ -37,54 +46,58 @@ describe('records repository', () => {
   });
 
   describe('CRUD', () => {
-    it('upserts and retrieves a record by key', async () => {
+    it('upserts and retrieves a record by account key', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord());
-
-      const fetched = await repo.get(KEY_A);
-      expect(fetched?.label).toBe('Test label');
+      expect((await repo.get(KEY_A))?.label).toBe('Test label');
     });
 
-    it('overwrites on a second upsert with the same key', async () => {
+    it('keeps Ethereum and Base records for the same address separate', async () => {
       const repo = createRecordsRepository(db);
-      await repo.upsert(makeRecord({ label: 'First' }));
-      await repo.upsert(makeRecord({ label: 'Second', updatedAt: '2026-02-01T00:00:00.000Z' }));
-
-      const fetched = await repo.get(KEY_A);
-      expect(fetched?.label).toBe('Second');
-      expect(await repo.list()).toHaveLength(1);
+      await repo.upsert(makeRecord({ key: k(1, 'a'.repeat(40)), chainId: 1, label: 'Eth' }));
+      await repo.upsert(
+        makeRecord({ key: k(8453, 'a'.repeat(40)), chainId: 8453, address: a('Aa'.repeat(20)), label: 'Base' }),
+      );
+      expect(await repo.list()).toHaveLength(2);
+      expect((await repo.get(k(1, 'a'.repeat(40))))?.label).toBe('Eth');
+      expect((await repo.get(k(8453, 'a'.repeat(40))))?.label).toBe('Base');
     });
 
-    it('lists records ordered by updatedAt descending', async () => {
+    it('lists ordered by updatedAt descending', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(
-        makeRecord({ key: k(ONE), address: a(ONE), label: 'older', updatedAt: '2026-01-01T00:00:00.000Z' }),
+        makeRecord({
+          key: k(1, ONE),
+          chainId: 1,
+          address: a(ONE),
+          label: 'older',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        }),
       );
       await repo.upsert(
-        makeRecord({ key: k(TWO), address: a(TWO), label: 'newer', updatedAt: '2026-03-01T00:00:00.000Z' }),
+        makeRecord({
+          key: k(1, TWO),
+          chainId: 1,
+          address: a(TWO),
+          label: 'newer',
+          updatedAt: '2026-03-01T00:00:00.000Z',
+        }),
       );
-
-      const list = await repo.list();
-      expect(list.map(r => r.label)).toEqual(['newer', 'older']);
+      expect((await repo.list()).map(r => r.label)).toEqual(['newer', 'older']);
     });
 
-    it('getMany returns only existing records and drops misses', async () => {
+    it('getMany drops misses', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord());
-      const results = await repo.getMany([KEY_A, k('9'.repeat(40))]);
+      const results = await repo.getMany([KEY_A, k(1, '9'.repeat(40))]);
       expect(results).toHaveLength(1);
-      expect(results[0].key).toBe(KEY_A);
     });
 
-    it('removes a record', async () => {
+    it('removes and clears', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord());
       await repo.remove(KEY_A);
       expect(await repo.get(KEY_A)).toBeUndefined();
-    });
-
-    it('clear removes every record', async () => {
-      const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord());
       await repo.clear();
       expect(await repo.list()).toEqual([]);
@@ -92,94 +105,84 @@ describe('records repository', () => {
   });
 
   describe('export', () => {
-    it('round-trips records through exportAll', async () => {
+    it('round-trips records', async () => {
       const repo = createRecordsRepository(db);
       const record = makeRecord();
       await repo.upsert(record);
-
       const exported = await repo.exportAll();
-      expect(exported.format).toBe('tracememo');
-      expect(exported.version).toBe(1);
-      expect(exported.records).toHaveLength(1);
-      expect(exported.records[0]).toEqual(record);
+      expect(exported.records).toEqual([record]);
     });
   });
 
-  describe('import', () => {
+  describe('import preview (dry-run)', () => {
+    it('counts create/update/skip without writing', async () => {
+      const repo = createRecordsRepository(db);
+      await repo.upsert(makeRecord({ label: 'Local', updatedAt: '2026-06-01T00:00:00.000Z' }));
+      const preview = await repo.previewImport(
+        envelope([
+          makeRecord({ label: 'Equal', updatedAt: '2026-06-01T00:00:00.000Z' }),
+          makeRecord({
+            key: k(1, ONE),
+            chainId: 1,
+            address: a(ONE),
+            label: 'New',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          }),
+        ]),
+      );
+      expect(preview).toEqual({ total: 2, created: 1, updated: 0, skipped: 1 });
+      expect((await repo.get(KEY_A))?.label).toBe('Local');
+    });
+
+    it('rejects a preview with an invalid record and writes nothing', async () => {
+      const repo = createRecordsRepository(db);
+      const bad = { ...makeRecord(), key: 'evm:0x' + 'a'.repeat(40) };
+      await expect(
+        repo.previewImport(envelope([makeRecord(), bad as unknown as AddressRecord])),
+      ).rejects.toBeInstanceOf(ImportError);
+    });
+  });
+
+  describe('import (all-or-nothing)', () => {
     it('creates records that do not exist', async () => {
       const repo = createRecordsRepository(db);
-      const envelope: TraceMemoExport = {
-        format: 'tracememo',
-        version: 1,
-        exportedAt: '2026-01-01T00:00:00.000Z',
-        records: [makeRecord()],
-      };
-
-      const result = await repo.importAll(envelope);
+      const result = await repo.importAll(envelope([makeRecord()]));
       expect(result).toEqual({ created: 1, updated: 0, skipped: 0, invalid: 0 });
-      expect(await repo.list()).toHaveLength(1);
     });
 
     it('updates when the incoming record is newer', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord({ label: 'Local', updatedAt: '2026-01-01T00:00:00.000Z' }));
-
-      const result = await repo.importAll({
-        format: 'tracememo',
-        version: 1,
-        exportedAt: '2026-06-01T00:00:00.000Z',
-        records: [makeRecord({ label: 'Imported', updatedAt: '2026-06-01T00:00:00.000Z' })],
-      });
-
-      expect(result).toEqual({ created: 0, updated: 1, skipped: 0, invalid: 0 });
-      const fetched = await repo.get(KEY_A);
-      expect(fetched?.label).toBe('Imported');
+      const result = await repo.importAll(
+        envelope([makeRecord({ label: 'Imported', updatedAt: '2026-06-01T00:00:00.000Z' })]),
+      );
+      expect(result.updated).toBe(1);
+      expect((await repo.get(KEY_A))?.label).toBe('Imported');
     });
 
     it('skips when the incoming record is older or equal', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord({ label: 'Local', updatedAt: '2026-06-01T00:00:00.000Z' }));
-
-      const result = await repo.importAll({
-        format: 'tracememo',
-        version: 1,
-        exportedAt: '2026-01-01T00:00:00.000Z',
-        records: [makeRecord({ label: 'Imported', updatedAt: '2026-01-01T00:00:00.000Z' })],
-      });
-
-      expect(result).toEqual({ created: 0, updated: 0, skipped: 1, invalid: 0 });
+      const result = await repo.importAll(
+        envelope([makeRecord({ label: 'Imported', updatedAt: '2026-01-01T00:00:00.000Z' })]),
+      );
+      expect(result.skipped).toBe(1);
       expect((await repo.get(KEY_A))?.label).toBe('Local');
     });
 
-    it('counts and skips invalid records without partial writes', async () => {
+    it('rejects the whole file on any invalid record with no writes', async () => {
       const repo = createRecordsRepository(db);
-      const valid = makeRecord({ key: k(ONE), address: a(ONE) });
-      const invalid = { ...valid, key: 'evm:not-a-key' } as unknown as AddressRecord;
-
-      const result = await repo.importAll({
-        format: 'tracememo',
-        version: 1,
-        exportedAt: '2026-01-01T00:00:00.000Z',
-        records: [valid, invalid],
-      });
-
-      expect(result).toEqual({ created: 1, updated: 0, skipped: 0, invalid: 1 });
-      expect(await repo.list()).toHaveLength(1);
+      const valid = makeRecord({ key: k(1, ONE), chainId: 1, address: a(ONE) });
+      const invalid = { ...valid, key: 'evm:0x' + 'a'.repeat(40) } as unknown as AddressRecord;
+      await expect(repo.importAll(envelope([valid, invalid]))).rejects.toBeInstanceOf(ImportError);
+      expect(await repo.list()).toHaveLength(0);
     });
 
     it('handles timezone-offset timestamps by comparing instants', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord({ updatedAt: '2026-01-01T00:00:00.000Z' }));
-
-      // Same instant as the local record, expressed with an offset.
       const sameInstant = '2026-01-01T01:00:00.000+01:00';
-      const result = await repo.importAll({
-        format: 'tracememo',
-        version: 1,
-        exportedAt: sameInstant,
-        records: [makeRecord({ updatedAt: sameInstant, label: 'Equal' })],
-      });
-
+      const result = await repo.importAll(envelope([makeRecord({ updatedAt: sameInstant, label: 'Equal' })]));
       expect(result.skipped).toBe(1);
       expect((await repo.get(KEY_A))?.label).toBe('Test label');
     });

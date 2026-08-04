@@ -1,9 +1,12 @@
 import type {
-  AddressKey,
+  AccountKey,
   AddressRecord,
-  AddressRecordInput,
+  ImportPreview,
   ImportResult,
   PageContext,
+  PageContextInput,
+  RecordCreateInput,
+  RecordUpdateInput,
   Settings,
   TraceMemoExport,
 } from '../domain/index.js';
@@ -12,23 +15,26 @@ import type {
  * Cross-context message protocol.
  *
  * The side panel and content script send `RequestMessage`s; the background
- * service worker is the only context that performs record CRUD. See
- * docs/02-TECHNICAL-ARCHITECTURE.md section 8.
+ * service worker is the only context that performs record CRUD. The background
+ * also enforces a sender authorization matrix (see docs/02-TECHNICAL-
+ * ARCHITECTURE.md message-security section) on top of the Zod validation.
  */
 export type RequestMessage =
-  | { type: 'PAGE_CONTEXT_SET'; payload: PageContext }
-  | { type: 'PAGE_CONTEXT_GET' }
-  | { type: 'RECORDS_GET_MANY'; payload: { keys: AddressKey[] } }
+  | { type: 'PAGE_CONTEXT_SET'; payload: PageContextInput }
+  | { type: 'PAGE_CONTEXT_GET'; payload: { tabId: number } }
+  | { type: 'RECORDS_GET_MANY'; payload: { keys: AccountKey[] } }
   | { type: 'RECORD_LIST' }
-  | { type: 'RECORD_GET'; payload: { key: AddressKey } }
-  | { type: 'RECORD_UPSERT'; payload: AddressRecordInput }
-  | { type: 'RECORD_DELETE'; payload: { key: AddressKey } }
+  | { type: 'RECORD_GET'; payload: { key: AccountKey } }
+  | { type: 'RECORD_CREATE'; payload: RecordCreateInput }
+  | { type: 'RECORD_UPDATE'; payload: RecordUpdateInput }
+  | { type: 'RECORD_DELETE'; payload: { key: AccountKey } }
   | { type: 'DATA_EXPORT' }
-  | { type: 'DATA_IMPORT'; payload: TraceMemoExport }
+  | { type: 'DATA_IMPORT'; payload: { data: TraceMemoExport } }
+  | { type: 'DATA_IMPORT_PREVIEW'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
   | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
-  | { type: 'OPEN_RECORD'; payload: { key: AddressKey } };
+  | { type: 'OPEN_RECORD'; payload: { key: AccountKey } };
 
 /** Response envelope. Errors never carry stack traces or user record content. */
 export type ResponseMessage<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } };
@@ -40,10 +46,12 @@ export interface ResponseMap {
   RECORDS_GET_MANY: AddressRecord[];
   RECORD_LIST: AddressRecord[];
   RECORD_GET: AddressRecord | null;
-  RECORD_UPSERT: AddressRecord;
+  RECORD_CREATE: AddressRecord;
+  RECORD_UPDATE: AddressRecord;
   RECORD_DELETE: { deleted: true };
   DATA_EXPORT: TraceMemoExport;
   DATA_IMPORT: ImportResult;
+  DATA_IMPORT_PREVIEW: ImportPreview;
   DATA_CLEAR: { cleared: true };
   SETTINGS_GET: Settings;
   SETTINGS_UPDATE: Settings;
@@ -58,6 +66,7 @@ export const ErrorCode = {
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   IMPORT_TOO_LARGE: 'IMPORT_TOO_LARGE',
+  FORBIDDEN: 'FORBIDDEN',
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

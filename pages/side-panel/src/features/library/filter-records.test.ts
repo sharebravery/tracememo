@@ -1,12 +1,13 @@
 import { filterRecords } from './filter-records.js';
 import { describe, expect, it } from 'vitest';
-import type { AddressKey, AddressRecord, EvmAddress } from '@extension/shared';
+import type { AccountKey, AddressRecord, EvmAddress, SupportedChainId } from '@extension/shared';
 
 const a = (hex: string): EvmAddress => `0x${hex}` as EvmAddress;
-const k = (hex: string): AddressKey => `evm:0x${hex}` as AddressKey;
+const k = (chainId: SupportedChainId, hex: string): AccountKey => `eip155:${chainId}:0x${hex}` as AccountKey;
 
 const record = (overrides: Partial<AddressRecord>): AddressRecord => ({
-  key: k('a'.repeat(40)),
+  key: k(1, 'a'.repeat(40)),
+  chainId: 1,
   address: a('a'.repeat(40)),
   label: 'Default label',
   note: 'default note',
@@ -19,21 +20,24 @@ const record = (overrides: Partial<AddressRecord>): AddressRecord => ({
 
 const records: AddressRecord[] = [
   record({
-    key: k('1'.repeat(40)),
+    key: k(1, '1'.repeat(40)),
+    chainId: 1,
     address: a('1'.repeat(40)),
     label: 'Vitalik',
     note: 'public wallet',
     confidence: 'confirmed',
   }),
   record({
-    key: k('2'.repeat(40)),
+    key: k(1, '2'.repeat(40)),
+    chainId: 1,
     address: a('2'.repeat(40)),
     label: 'Exchange hot wallet',
     note: 'Binance',
     confidence: 'likely',
   }),
   record({
-    key: k('3'.repeat(40)),
+    key: k(8453, '3'.repeat(40)),
+    chainId: 8453,
     address: a('3'.repeat(40)),
     label: 'Unknown',
     note: 'needs review',

@@ -18,6 +18,10 @@ describe('TraceMemo manifest', () => {
     expect(manifest.manifest_version).toBe(3);
   });
 
+  it('requires Chrome 116 or newer', () => {
+    expect(manifest.minimum_chrome_version).toBe('116');
+  });
+
   it('declares only the allowed permissions', () => {
     expect(manifest.permissions).toEqual(['storage', 'sidePanel']);
   });

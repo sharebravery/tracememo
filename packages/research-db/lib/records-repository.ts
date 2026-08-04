@@ -1,23 +1,24 @@
-import { applyImport, buildExportEnvelope } from './import-export.js';
+import { applyImport, buildExportEnvelope, previewImport } from './import-export.js';
 import type { TraceMemoDatabase } from './schema.js';
-import type { AddressKey, AddressRecord, ImportResult, TraceMemoExport } from '@extension/shared';
+import type { AccountKey, AddressRecord, ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
 
 /**
  * Records repository - the only layer that reads and writes the records store.
  *
  * The background service worker holds one instance; the side panel and content
- * script never touch IndexedDB directly. See
- * docs/02-TECHNICAL-ARCHITECTURE.md section 7.2.
+ * script never touch IndexedDB directly. See docs/02-TECHNICAL-ARCHITECTURE.md
+ * section 7.2.
  */
 export interface RecordsRepository {
   list(): Promise<AddressRecord[]>;
-  get(key: AddressKey): Promise<AddressRecord | undefined>;
-  getMany(keys: AddressKey[]): Promise<AddressRecord[]>;
+  get(key: AccountKey): Promise<AddressRecord | undefined>;
+  getMany(keys: AccountKey[]): Promise<AddressRecord[]>;
   upsert(record: AddressRecord): Promise<AddressRecord>;
-  remove(key: AddressKey): Promise<void>;
+  remove(key: AccountKey): Promise<void>;
   clear(): Promise<void>;
   exportAll(): Promise<TraceMemoExport>;
   importAll(input: TraceMemoExport): Promise<ImportResult>;
+  previewImport(input: TraceMemoExport): Promise<ImportPreview>;
 }
 
 export const createRecordsRepository = (db: TraceMemoDatabase): RecordsRepository => ({
@@ -46,4 +47,6 @@ export const createRecordsRepository = (db: TraceMemoDatabase): RecordsRepositor
   exportAll: async () => buildExportEnvelope(await db.records.toArray()),
 
   importAll: async input => applyImport(db, input),
+
+  previewImport: async input => previewImport(db, input),
 });

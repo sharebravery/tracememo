@@ -5,9 +5,10 @@ import { SearchInput } from './SearchInput';
 import { sendMessage } from '../../messaging';
 import { RecordEditor } from '../record-editor/RecordEditor';
 import { useEffect, useState } from 'react';
-import type { AddressKey, AddressRecord, Confidence } from '@extension/shared';
+import type { AccountKey, AddressRecord, Confidence } from '@extension/shared';
 
 type ConfidenceFilter = Confidence | 'all';
+type EditingState = { mode: 'create' } | { mode: 'update'; record: AddressRecord } | null;
 
 const CONFIDENCE_FILTER_OPTIONS: { value: ConfidenceFilter; label: string }[] = [
   { value: 'all', label: 'All confidence' },
@@ -18,14 +19,14 @@ const CONFIDENCE_FILTER_OPTIONS: { value: ConfidenceFilter; label: string }[] = 
 
 interface LibraryViewProps {
   /** When set, open this record in the editor on mount (from an annotation click). */
-  initialEditKey?: AddressKey;
+  initialEditKey?: AccountKey;
 }
 
 export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
   const [records, setRecords] = useState<AddressRecord[] | null>(null);
   const [query, setQuery] = useState('');
   const [confidence, setConfidence] = useState<ConfidenceFilter>('all');
-  const [editing, setEditing] = useState<{ record?: AddressRecord } | null>(null);
+  const [editing, setEditing] = useState<EditingState>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
@@ -45,7 +46,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
         try {
           const record = await sendMessage({ type: 'RECORD_GET', payload: { key: initialEditKey } });
           if (record) {
-            setEditing({ record });
+            setEditing({ mode: 'update', record });
           }
         } catch {
           // Pending record no longer exists; ignore.
@@ -68,7 +69,8 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
   if (editing) {
     return (
       <RecordEditor
-        initial={editing.record}
+        mode={editing.mode}
+        initial={editing.mode === 'update' ? editing.record : undefined}
         onSaved={() => {
           setEditing(null);
           void refresh();
@@ -88,7 +90,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
         <h2 className="text-sm font-semibold text-slate-700">Library</h2>
         <button
           type="button"
-          onClick={() => setEditing({})}
+          onClick={() => setEditing({ mode: 'create' })}
           className="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           New Record
         </button>
@@ -124,7 +126,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
         <EmptyState
           message="No saved addresses yet. Add your first record to start building context."
           actionLabel="New Record"
-          onAction={() => setEditing({})}
+          onAction={() => setEditing({ mode: 'create' })}
         />
       )}
 
@@ -136,7 +138,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
             <AddressRow
               key={record.key}
               record={record}
-              onEdit={() => setEditing({ record })}
+              onEdit={() => setEditing({ mode: 'update', record })}
               onDelete={() => void handleDelete(record)}
             />
           ))}

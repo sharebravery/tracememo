@@ -2,13 +2,15 @@ import 'fake-indexeddb/auto';
 import { createRecordsRepository } from './records-repository.js';
 import { TraceMemoDatabase } from './schema.js';
 import { describe, expect, it } from 'vitest';
-import type { AddressKey, AddressRecord, EvmAddress } from '@extension/shared';
+import type { AccountKey, AddressRecord, EvmAddress, SupportedChainId } from '@extension/shared';
 
 const a = (i: number): EvmAddress => `0x${i.toString(16).padStart(40, '0')}` as EvmAddress;
-const k = (i: number): AddressKey => `evm:0x${i.toString(16).padStart(40, '0')}` as AddressKey;
+const k = (i: number): AccountKey => `eip155:1:0x${i.toString(16).padStart(40, '0')}` as AccountKey;
+const CHAIN: SupportedChainId = 1;
 
 const makeRecord = (i: number): AddressRecord => ({
   key: k(i),
+  chainId: CHAIN,
   address: a(i),
   label: `Label ${i}`,
   note: `research note ${i}`,

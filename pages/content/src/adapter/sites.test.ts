@@ -6,13 +6,15 @@ describe('site registry', () => {
     expect(SITES.map(s => s.id).sort()).toEqual(['basescan', 'etherscan']);
   });
 
-  it('detects Etherscan (bare and www)', () => {
+  it('detects Etherscan (bare and www) with chain id 1', () => {
     expect(detectSite('etherscan.io')?.id).toBe('etherscan');
+    expect(detectSite('etherscan.io')?.chainId).toBe(1);
     expect(detectSite('www.etherscan.io')?.id).toBe('etherscan');
   });
 
-  it('detects BaseScan (bare and www)', () => {
+  it('detects BaseScan (bare and www) with chain id 8453', () => {
     expect(detectSite('basescan.org')?.id).toBe('basescan');
+    expect(detectSite('basescan.org')?.chainId).toBe(8453);
     expect(detectSite('www.basescan.org')?.id).toBe('basescan');
   });
 

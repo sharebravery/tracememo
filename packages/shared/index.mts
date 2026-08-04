@@ -5,4 +5,5 @@ export * from './lib/domain/index.js';
 export * from './lib/validation/index.js';
 export * from './lib/messages/index.js';
 export * from './lib/session-keys.js';
+export * from './lib/limits.js';
 export * from './const.js';

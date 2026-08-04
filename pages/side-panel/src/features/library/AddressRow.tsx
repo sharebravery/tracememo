@@ -1,4 +1,5 @@
 import { InlineDeleteConfirm } from './InlineDeleteConfirm';
+import { CHAIN_LABELS } from '@extension/shared';
 import type { AddressRecord, Confidence } from '@extension/shared';
 
 interface AddressRowProps {
@@ -41,6 +42,9 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => {
               className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-600"
               aria-label="Your private note, not a platform verification">
               Private
+            </span>
+            <span className="shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+              {CHAIN_LABELS[record.chainId]}
             </span>
             <span
               className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CONFIDENCE_BADGE_CLASS[record.confidence]}`}

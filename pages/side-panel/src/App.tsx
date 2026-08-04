@@ -7,13 +7,13 @@ import { TABS } from './routes';
 import { PENDING_RECORD_STORAGE_KEY } from '@extension/shared';
 import { useEffect, useState } from 'react';
 import type { TabId } from './routes';
-import type { AddressKey } from '@extension/shared';
+import type { AccountKey } from '@extension/shared';
 
 type ReadyState = { onboarding: boolean } | { loading: true };
 
 const App = () => {
   const [tab, setTab] = useState<TabId>('library');
-  const [pendingKey, setPendingKey] = useState<AddressKey | undefined>(undefined);
+  const [pendingKey, setPendingKey] = useState<AccountKey | undefined>(undefined);
   const [ready, setReady] = useState<ReadyState>({ loading: true });
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const App = () => {
 
       // If the side panel was opened from an annotation click, focus that record.
       const data = await chrome.storage.session.get(PENDING_RECORD_STORAGE_KEY);
-      const key = data[PENDING_RECORD_STORAGE_KEY] as AddressKey | undefined;
+      const key = data[PENDING_RECORD_STORAGE_KEY] as AccountKey | undefined;
       if (key) {
         setPendingKey(key);
         setTab('library');

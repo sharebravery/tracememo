@@ -22,6 +22,7 @@ const SUPPORTED_HOSTS = ['https://etherscan.io/*', 'https://basescan.org/*'] as 
 
 const manifest = {
   manifest_version: 3,
+  minimum_chrome_version: '116',
   default_locale: 'en',
   name: '__MSG_extensionName__',
   description: '__MSG_extensionDescription__',

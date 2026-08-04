@@ -1,5 +1,5 @@
 import { ADDRESS_REGEX, ADDRESS_TEST } from './normalize-address.js';
-import { isEvmAddress, toAddressKey } from '@extension/shared';
+import { isEvmAddress } from '@extension/shared';
 import type { EvmAddress } from '@extension/shared';
 
 /**
@@ -49,9 +49,11 @@ export const scanAddresses = (root: Node, cap = 500): EvmAddress[] => {
 
   const add = (candidate: string): void => {
     if (!isEvmAddress(candidate)) return;
-    const key = toAddressKey(candidate);
-    if (seen.has(key)) return;
-    seen.add(key);
+    // Detection is chain-agnostic; dedup by lowercase address. The orchestrator
+    // combines this address with the page's chain id to form the account key.
+    const dedupKey = candidate.toLowerCase();
+    if (seen.has(dedupKey)) return;
+    seen.add(dedupKey);
     addresses.push(candidate as EvmAddress);
     if (addresses.length >= cap) return;
   };

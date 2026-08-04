@@ -1,15 +1,17 @@
 import { ADDRESS_REGEX, ADDRESS_TEST } from '../detection/normalize-address.js';
 import { isExcludedNode } from '../detection/scan-addresses.js';
-import { toAddressKey } from '@extension/shared';
-import type { AddressKey, AddressRecord } from '@extension/shared';
+import { toAccountKey } from '@extension/shared';
+import type { AccountKey, AddressRecord, SupportedChainId } from '@extension/shared';
 
 const DATA_ATTR = 'data-tracememo';
 
 interface AnnotationContext {
-  /** Returns the saved record for a canonical key, if one exists. */
-  hasRecord: (key: AddressKey) => AddressRecord | undefined;
+  /** Chain id for the current page; combined with an address to form the key. */
+  chainId: SupportedChainId;
+  /** Returns the saved record for a canonical account key, if one exists. */
+  hasRecord: (key: AccountKey) => AddressRecord | undefined;
   /** Called when the user activates an annotation. */
-  onOpen: (key: AddressKey) => void;
+  onOpen: (key: AccountKey) => void;
 }
 
 const BADGE_STYLE =
@@ -19,14 +21,14 @@ const BADGE_STYLE =
 
 const CUE_STYLE = 'font-weight:400;color:#6366f1;font-size:10px;';
 
-const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): HTMLElement => {
+const createBadge = (record: AddressRecord, onOpen: (key: AccountKey) => void): HTMLElement => {
   const badge = document.createElement('span');
   badge.setAttribute(DATA_ATTR, 'annotation');
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
   badge.setAttribute(
     'aria-label',
-    `TraceMemo private label: ${record.label}. Address: ${record.address}. Activate to open the record.`,
+    `TraceMemo private label: ${record.label}. Address: ${record.address} on chain ${record.chainId}. Activate to open the record.`,
   );
   badge.style.cssText = BADGE_STYLE;
   badge.textContent = record.label;
@@ -37,7 +39,9 @@ const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): 
   cue.textContent = '· private';
   badge.appendChild(cue);
 
-  const open = (): void => onOpen(toAddressKey(record.address));
+  // The badge opens the record on the SAME chain as the page; never crosses to
+  // the other chain's record for the same address.
+  const open = (): void => onOpen(toAccountKey(record.chainId, record.address));
   badge.addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
@@ -56,12 +60,12 @@ const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): 
 
 /**
  * Render a private badge next to every visible occurrence of an address that
- * has a saved record.
+ * has a saved record ON THE CURRENT CHAIN.
  *
- * Idempotent: record-matched occurrences are wrapped in a TraceMemo-owned
- * span (excluded from rescans) so they are never annotated twice. Occurrences
- * without a record are left as plain text so they can be annotated later when a
- * record is saved. The original address text is never replaced or hidden.
+ * Idempotent: record-matched occurrences are wrapped in a TraceMemo-owned span
+ * (excluded from rescans) so they are never annotated twice. Occurrences
+ * without a record are left as plain text so they can be annotated later. The
+ * original address text is never replaced or hidden.
  *
  * Returns the number of badges inserted.
  */
@@ -89,7 +93,7 @@ export const renderAnnotations = (root: Node, context: AnnotationContext): numbe
     if (!parent) continue;
 
     const matches = [...text.matchAll(ADDRESS_REGEX)];
-    const matchesWithRecord = matches.filter(match => context.hasRecord(toAddressKey(match[0])));
+    const matchesWithRecord = matches.filter(match => context.hasRecord(toAccountKey(context.chainId, match[0])));
     if (matchesWithRecord.length === 0) continue;
 
     const fragment = document.createDocumentFragment();
@@ -98,13 +102,12 @@ export const renderAnnotations = (root: Node, context: AnnotationContext): numbe
     for (const match of matches) {
       const start = match.index ?? 0;
       const end = start + match[0].length;
-      const key = toAddressKey(match[0]);
+      const key = toAccountKey(context.chainId, match[0]);
       const record = context.hasRecord(key);
 
       fragment.appendChild(document.createTextNode(text.slice(lastIndex, start)));
 
       if (record) {
-        // Wrap the address text (preserved verbatim) to mark it as annotated.
         const wrapper = document.createElement('span');
         wrapper.setAttribute(DATA_ATTR, 'address');
         wrapper.textContent = match[0];
@@ -112,7 +115,6 @@ export const renderAnnotations = (root: Node, context: AnnotationContext): numbe
         fragment.appendChild(createBadge(record, context.onOpen));
         inserted += 1;
       } else {
-        // No record yet: keep as plain text so it can be annotated later.
         fragment.appendChild(document.createTextNode(match[0]));
       }
 

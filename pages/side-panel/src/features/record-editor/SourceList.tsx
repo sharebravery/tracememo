@@ -1,9 +1,10 @@
+import { SOURCE_TITLE_MAX, SOURCE_URL_MAX } from '@extension/shared';
 import { useState } from 'react';
-import type { ResearchSource } from '@extension/shared';
+import type { SourceInput } from '@extension/shared';
 
 interface SourceListProps {
-  sources: ResearchSource[];
-  onChange: (sources: ResearchSource[]) => void;
+  sources: SourceInput[];
+  onChange: (sources: SourceInput[]) => void;
 }
 
 const isValidHttpUrl = (value: string): boolean => {
@@ -16,8 +17,9 @@ const isValidHttpUrl = (value: string): boolean => {
 };
 
 /**
- * Add/remove source links for a record. The user's conclusion is kept visually
- * separate from its sources (PRD FR-07).
+ * Add/remove source links for a record. The UI authors only `url` and `title`;
+ * the background generates `id` and `createdAt` on save. The user's conclusion
+ * is kept visually separate from its sources (PRD FR-07).
  */
 export const SourceList = ({ sources, onChange }: SourceListProps) => {
   const [url, setUrl] = useState('');
@@ -35,21 +37,17 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
       return;
     }
 
-    const source: ResearchSource = {
-      id: crypto.randomUUID(),
-      url: trimmedUrl,
-      title: title.trim().slice(0, 300),
-      createdAt: new Date().toISOString(),
-    };
-
-    onChange([...sources, source]);
+    onChange([
+      ...sources,
+      { url: trimmedUrl.slice(0, SOURCE_URL_MAX), title: title.trim().slice(0, SOURCE_TITLE_MAX) },
+    ]);
     setUrl('');
     setTitle('');
     setError(null);
   };
 
-  const removeSource = (id: string) => {
-    onChange(sources.filter(source => source.id !== id));
+  const removeSource = (index: number) => {
+    onChange(sources.filter((_, i) => i !== index));
   };
 
   return (
@@ -58,8 +56,10 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
 
       {sources.length > 0 && (
         <ul className="flex flex-col gap-1">
-          {sources.map(source => (
-            <li key={source.id} className="flex items-start justify-between gap-2 rounded bg-slate-50 px-2 py-1">
+          {sources.map((source, index) => (
+            <li
+              key={`${source.url}-${index}`}
+              className="flex items-start justify-between gap-2 rounded bg-slate-50 px-2 py-1">
               <div className="min-w-0">
                 {source.title ? (
                   <p className="truncate text-xs font-medium text-slate-700">{source.title}</p>
@@ -76,7 +76,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
               </div>
               <button
                 type="button"
-                onClick={() => removeSource(source.id)}
+                onClick={() => removeSource(index)}
                 className="shrink-0 text-[11px] font-medium text-red-600 hover:text-red-700 focus:outline-none focus-visible:underline">
                 Remove
               </button>
@@ -91,6 +91,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
           value={url}
           onChange={event => setUrl(event.target.value)}
           placeholder="https://example.com/source"
+          maxLength={SOURCE_URL_MAX}
           className="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         <input
@@ -98,7 +99,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
           value={title}
           onChange={event => setTitle(event.target.value)}
           placeholder="Source title (optional)"
-          maxLength={300}
+          maxLength={SOURCE_TITLE_MAX}
           className="w-full rounded border border-slate-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         {error && <p className="text-[11px] text-red-600">{error}</p>}

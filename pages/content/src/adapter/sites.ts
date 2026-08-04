@@ -1,17 +1,19 @@
-import type { SiteId } from '@extension/shared';
+import type { SiteId, SupportedChainId } from '@extension/shared';
 
 /**
  * Supported explorer site registry. One Etherscan-family adapter serves every
- * site here; BaseScan is added in Milestone 4.
+ * site here. Each site maps to exactly one chain id; the same 0x address on
+ * different chains is a distinct research subject.
  */
 export interface ExplorerSite {
   id: SiteId;
+  chainId: SupportedChainId;
   hostname: string;
 }
 
 export const SITES: readonly ExplorerSite[] = [
-  { id: 'etherscan', hostname: 'etherscan.io' },
-  { id: 'basescan', hostname: 'basescan.org' },
+  { id: 'etherscan', chainId: 1, hostname: 'etherscan.io' },
+  { id: 'basescan', chainId: 8453, hostname: 'basescan.org' },
 ];
 
 /**

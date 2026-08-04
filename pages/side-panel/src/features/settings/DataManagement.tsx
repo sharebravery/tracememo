@@ -1,9 +1,8 @@
 import { sendMessage } from '../../messaging';
-import { addressRecordSchema, traceMemoExportEnvelopeSchema } from '@extension/shared';
+import { IMPORT_MAX_BYTES, traceMemoExportSchema } from '@extension/shared';
 import { useRef, useState } from 'react';
-import type { ImportResult, TraceMemoExport } from '@extension/shared';
+import type { ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
 
-const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
 const todayStamp = () => new Date().toISOString().slice(0, 10);
 
 const downloadJson = (filename: string, data: unknown): void => {
@@ -16,18 +15,16 @@ const downloadJson = (filename: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
-interface ImportPreview {
-  total: number;
-  valid: number;
-  invalid: number;
-  envelope: TraceMemoExport;
+interface ImportState {
+  data: TraceMemoExport;
+  preview: ImportPreview;
 }
 
 export const DataManagement = () => {
   const fileInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [importState, setImportState] = useState<ImportState | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [clearArmed, setClearArmed] = useState(false);
 
@@ -46,40 +43,31 @@ export const DataManagement = () => {
     setError(null);
     setMessage(null);
     setImportResult(null);
-    setPreview(null);
+    setImportState(null);
 
-    if (file.size > MAX_IMPORT_BYTES) {
-      setError('File is larger than 10 MB. Import cancelled.');
+    if (file.size > IMPORT_MAX_BYTES) {
+      setError(`File is ${file.size} bytes, larger than the 10 MB limit. Import cancelled.`);
       return;
     }
 
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as unknown;
-      const envelope = traceMemoExportEnvelopeSchema.parse(parsed) as TraceMemoExport;
-
-      let valid = 0;
-      let invalid = 0;
-      for (const record of envelope.records) {
-        if (addressRecordSchema.safeParse(record).success) {
-          valid += 1;
-        } else {
-          invalid += 1;
-        }
-      }
-
-      setPreview({ total: envelope.records.length, valid, invalid, envelope });
+      // Strict all-or-nothing validation: any invalid record rejects the file.
+      const data = traceMemoExportSchema.parse(parsed) as TraceMemoExport;
+      const preview = await sendMessage({ type: 'DATA_IMPORT_PREVIEW', payload: { data } });
+      setImportState({ data, preview });
     } catch (e) {
       setError(e instanceof Error ? `Invalid TraceMemo file: ${e.message}` : 'Invalid TraceMemo file.');
     }
   };
 
   const confirmImport = async () => {
-    if (!preview) return;
+    if (!importState) return;
     try {
-      const result = await sendMessage({ type: 'DATA_IMPORT', payload: preview.envelope });
+      const result = await sendMessage({ type: 'DATA_IMPORT', payload: { data: importState.data } });
       setImportResult(result);
-      setPreview(null);
+      setImportState(null);
       setMessage(null);
       setError(null);
     } catch (e) {
@@ -130,14 +118,16 @@ export const DataManagement = () => {
         />
       </div>
 
-      {preview && (
+      {importState && (
         <div className="rounded bg-slate-50 p-2 text-xs text-slate-700">
-          <p className="font-medium">Import preview</p>
+          <p className="font-medium">Import preview (all records valid)</p>
           <p>
-            {preview.total} record{preview.total === 1 ? '' : 's'}: {preview.valid} valid, {preview.invalid} to skip.
+            {importState.preview.total} record{importState.preview.total === 1 ? '' : 's'}:{' '}
+            {importState.preview.created} new, {importState.preview.updated} to update, {importState.preview.skipped}{' '}
+            kept (older or equal).
           </p>
           <p className="mt-1 text-slate-500">
-            Existing records with a newer <code>updatedAt</code> are kept; incoming newer records overwrite.
+            Writes happen in one transaction. If any record were invalid the whole file would be rejected.
           </p>
           <div className="mt-2 flex gap-2">
             <button
@@ -148,7 +138,7 @@ export const DataManagement = () => {
             </button>
             <button
               type="button"
-              onClick={() => setPreview(null)}
+              onClick={() => setImportState(null)}
               className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
               Cancel
             </button>
@@ -158,8 +148,7 @@ export const DataManagement = () => {
 
       {importResult && (
         <p className="rounded bg-emerald-50 px-2 py-1.5 text-xs text-emerald-800">
-          Import complete: {importResult.created} added, {importResult.updated} updated, {importResult.skipped} kept,
-          {' ' + importResult.invalid} invalid.
+          Import complete: {importResult.created} added, {importResult.updated} updated, {importResult.skipped} kept.
         </p>
       )}
 
