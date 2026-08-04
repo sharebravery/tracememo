@@ -1,0 +1,33 @@
+{
+  "extensionDescription": {
+    "description": "Extension description shown in the Chrome extensions list",
+    "message": "Private context for every onchain address. Attach a label, note, confidence, and source to EVM addresses on Etherscan and BaseScan."
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "TraceMemo"
+  },
+  "openSidePanel": {
+    "description": "Tooltip for the toolbar icon",
+    "message": "Open TraceMemo side panel"
+  },
+  "tagline": {
+    "description": "Short tagline shown in the side panel",
+    "message": "Private context for every onchain address"
+  },
+  "displayErrorInfo": {
+    "message": "Something went wrong"
+  },
+  "displayErrorDescription": {
+    "message": "Sorry, something went wrong while loading the side panel."
+  },
+  "displayErrorDetailsInfo": {
+    "message": "Error details:"
+  },
+  "displayErrorUnknownErrorInfo": {
+    "message": "Unknown error"
+  },
+  "displayErrorReset": {
+    "message": "Try again"
+  }
+}
