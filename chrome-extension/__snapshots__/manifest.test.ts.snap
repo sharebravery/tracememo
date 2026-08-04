@@ -1,0 +1,45 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
+{
+  "action": {
+    "default_icon": "icon-34.png",
+    "default_title": "__MSG_openSidePanel__",
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module",
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "content/all.iife.js",
+      ],
+      "matches": [
+        "https://etherscan.io/*",
+        "https://basescan.org/*",
+      ],
+      "run_at": "document_idle",
+    },
+  ],
+  "default_locale": "en",
+  "description": "__MSG_extensionDescription__",
+  "host_permissions": [
+    "https://etherscan.io/*",
+    "https://basescan.org/*",
+  ],
+  "icons": {
+    "128": "icon-128.png",
+  },
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "permissions": [
+    "storage",
+    "sidePanel",
+  ],
+  "side_panel": {
+    "default_path": "side-panel/index.html",
+  },
+  "version": "0.5.0",
+}
+`;
