@@ -276,20 +276,21 @@ No popup fallback is required for MVP.
 
 ### 6.1 Canonical identity
 
-MVP supports two chains: Ethereum Mainnet (id 1) and Base (id 8453). Address identity is chain-aware.
+MVP supports two chains: Ethereum Mainnet (id 1) and Base (id 8453). One global record per EVM address holds a shared label/tags/note plus independent per-chain contexts.
 
 ```ts
 export type SupportedChainId = 1 | 8453;
 export type EvmAddress = `0x${string}`;
-export type AccountKey = `eip155:${SupportedChainId}:${string}`;
+export type AddressKey = `evm:${string}`;
 ```
 
 Rules:
 
 - validate with viem `isAddress`;
 - display checksum address using viem `getAddress`;
-- canonical key is `eip155:${chainId}:${address.toLowerCase()}`;
-- the chain id is part of the key: the same EVM address on Ethereum Mainnet and Base is NOT the same record and must never be auto-merged;
+- canonical global key is `evm:${address.toLowerCase()}` - one record per address; the chain id is NOT part of the key;
+- each record stores per-chain contexts (chainId, chain-level note, confidence, sources); the same address on Ethereum Mainnet and Base shares the global label/tags/note but NOT the chain-level note, confidence, or sources;
+- the same address is not assumed to have the same contract code, purpose, or state across chains;
 - Etherscan maps to chain id 1; BaseScan maps to chain id 8453.
 
 ### 6.2 Record types
@@ -304,14 +305,22 @@ export interface ResearchSource {
   createdAt: string;
 }
 
-export interface AddressRecord {
-  key: AccountKey;
+export interface ChainContext {
   chainId: SupportedChainId;
-  address: EvmAddress;
-  label: string;
   note: string;
   confidence: Confidence;
   sources: ResearchSource[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddressRecord {
+  key: AddressKey;
+  address: EvmAddress;
+  label: string;
+  tags: string[];
+  note: string;
+  chains: ChainContext[];
   createdAt: string;
   updatedAt: string;
 }
@@ -323,18 +332,23 @@ export interface SourceInput {
 }
 
 export interface RecordCreateInput {
-  chainId: SupportedChainId;
   address: EvmAddress;
+  chainId: SupportedChainId;
   label: string;
+  tags: string[];
   note: string;
+  chainNote: string;
   confidence: Confidence;
   sources: SourceInput[];
 }
 
 export interface RecordUpdateInput {
-  key: AccountKey;
+  key: AddressKey;
+  chainId: SupportedChainId;
   label: string;
+  tags: string[];
   note: string;
+  chainNote: string;
   confidence: Confidence;
   sources: SourceInput[];
 }
@@ -348,7 +362,8 @@ Zod schemas enforce:
 - chain id is 1 or 8453;
 - label length 1–60;
 - note maximum 2,000;
-- at most 50 sources per record;
+- at most 20 tags per record (40 chars each); at most 2 chain contexts per record;
+- at most 50 sources per chain context;
 - source URL must be `https:` or `http:`, max 2,048 chars;
 - source title maximum 300;
 - page title max 300, page URL max 2,048;
@@ -379,9 +394,11 @@ class TraceMemoDatabase extends Dexie {
 
   constructor() {
     super('tracememo');
-    this.version(1).stores({
-      records: '&key, address, label, confidence, createdAt, updatedAt',
-    });
+    // v1: evm:<address> (no chain). v2: eip155:<chainId>:<address> (per chain).
+    // v3: one global record per address with per-chain contexts.
+    this.version(1).stores({ records: '&key, address, label, confidence, createdAt, updatedAt' });
+    this.version(2).stores({ records: '&key, chainId, address, label, confidence, createdAt, updatedAt' });
+    this.version(3).stores({ records: '&key, address, label, updatedAt' });
   }
 }
 ```
@@ -428,19 +445,19 @@ Required requests:
 export type RequestMessage =
   | { type: 'PAGE_CONTEXT_SET'; payload: PageContextInput }
   | { type: 'PAGE_CONTEXT_GET'; payload: { tabId: number } }
-  | { type: 'RECORDS_GET_MANY'; payload: { keys: AccountKey[] } }
+  | { type: 'RECORDS_GET_MANY'; payload: { keys: AddressKey[] } }
   | { type: 'RECORD_LIST' }
-  | { type: 'RECORD_GET'; payload: { key: AccountKey } }
+  | { type: 'RECORD_GET'; payload: { key: AddressKey } }
   | { type: 'RECORD_CREATE'; payload: RecordCreateInput }
   | { type: 'RECORD_UPDATE'; payload: RecordUpdateInput }
-  | { type: 'RECORD_DELETE'; payload: { key: AccountKey } }
+  | { type: 'RECORD_DELETE'; payload: { key: AddressKey } }
   | { type: 'DATA_EXPORT' }
   | { type: 'DATA_IMPORT'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_IMPORT_PREVIEW'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
   | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
-  | { type: 'OPEN_RECORD'; payload: { key: AccountKey } };
+  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId: SupportedChainId } };
 
 type ImportPreview = { total: number; created: number; updated: number; skipped: number };
 type ImportResult = { created: number; updated: number; skipped: number; invalid: number };

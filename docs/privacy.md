@@ -16,7 +16,7 @@ The extension processes the following data, all on your device:
 
 ## What stays on your device
 
-- Every record you create is stored in your browser's IndexedDB **on this device only**, under chain-aware keys (`eip155:<chainId>:<address>`). A record on Ethereum Mainnet and a record on Base for the same address are separate and are never merged.
+- Every record you create is stored in your browser's IndexedDB **on this device only**, under a global address key (`evm:<address>`). One record per address holds a shared label, tags, and global note, plus independent per-chain contexts (chain-level note, confidence, sources). The shared label is the same across Ethereum Mainnet and Base; the chain-level note, confidence, and sources are not.
 - Small preferences are stored in `chrome.storage.local` on this device.
 - Page context (detected addresses, URL, title) is held in `chrome.storage.session` **per tab** and is cleared when the tab closes or the browser exits.
 - TraceMemo has **no account, no sign-in, no cloud sync, and no backend server**. There is nowhere for your records to be transmitted.

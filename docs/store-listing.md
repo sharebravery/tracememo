@@ -12,7 +12,7 @@ Private, chain-aware context for onchain addresses. Attach a label, note, confid
 
 TraceMemo is a local-first research notebook for Web3 researchers. When you see an EVM address on Etherscan or BaseScan, save a short label, a note, a confidence level, and one or more source links. The next time that address appears on the same chain, TraceMemo shows your private label beside it - no spreadsheets or separate notes required.
 
-Records are chain-aware: an address on Ethereum Mainnet (chain id 1) and the same address on Base (chain id 8453) are separate research subjects. A label you save on one chain is never automatically shown on the other.
+Records are one global entry per EVM address: a shared label, tags, and global note, plus independent per-chain contexts (chain-level note, confidence, sources) for Ethereum Mainnet (chain id 1) and Base (chain id 8453). The shared label appears on both chains; the chain-level note, confidence, and sources are independent and are not copied across chains. The same address is not assumed to have the same contract code, purpose, or state across chains.
 
 What makes TraceMemo different from a simple address replacer:
 
@@ -29,7 +29,7 @@ How it works:
 
 Privacy:
 
-- Records are stored only on your device (IndexedDB), keyed by chain. No analytics, no advertising, no remote error reporting, no backend.
+- Records are stored only on your device (IndexedDB), one global record per address with per-chain contexts. No analytics, no advertising, no remote error reporting, no backend.
 - TraceMemo never connects a wallet, requests signatures, sends transactions, reads balances, or makes RPC calls.
 - The extension only runs on etherscan.io and basescan.org. It does not request `<all_urls>` or broad host access.
 - Exported backups are plaintext JSON, not encrypted. Store them securely. Deleting the extension or clearing browser data may permanently delete records.

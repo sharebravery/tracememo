@@ -7,6 +7,8 @@ import {
   SOURCE_MAX_PER_RECORD,
   SOURCE_TITLE_MAX,
   SOURCE_URL_MAX,
+  TAGS_MAX,
+  TAG_MAX_LENGTH,
 } from '../limits.js';
 import { isAddress } from 'viem';
 import { z } from 'zod';
@@ -38,10 +40,14 @@ const sourcesInputArraySchema = z
   });
 
 const keysPayloadSchema = z.object({
-  keys: z.array(z.string().regex(/^eip155:(1|8453):0x[0-9a-f]{40}$/)).max(ACCOUNT_KEYS_MAX, {
-    message: `At most ${ACCOUNT_KEYS_MAX} account keys per request`,
+  keys: z.array(z.string().regex(/^evm:0x[0-9a-f]{40}$/)).max(ACCOUNT_KEYS_MAX, {
+    message: `At most ${ACCOUNT_KEYS_MAX} address keys per request`,
   }),
 });
+
+const tagsSchema = z
+  .array(z.string().min(1).max(TAG_MAX_LENGTH))
+  .max(TAGS_MAX, { message: `A record may have at most ${TAGS_MAX} tags` });
 
 /**
  * Runtime validation schemas for TraceMemo domain objects.
@@ -61,9 +67,7 @@ export const evmAddressSchema = z
   .string()
   .refine(v => isAddress(v, { strict: false }), { message: 'Invalid EVM address' });
 
-export const accountKeySchema = z
-  .string()
-  .regex(/^eip155:(1|8453):0x[0-9a-f]{40}$/, { message: 'Invalid account key' });
+export const addressKeySchema = z.string().regex(/^evm:0x[0-9a-f]{40}$/, { message: 'Invalid address key' });
 
 /** Full persisted source (with background-generated id and createdAt). */
 export const researchSourceSchema = z.object({
@@ -73,17 +77,9 @@ export const researchSourceSchema = z.object({
   createdAt: isoTimestampSchema,
 });
 
-/** Source authored by the UI (no id, no createdAt). */
-export const sourceInputSchema = z.object({
-  url: httpUrlSchema,
-  title: z.string().max(SOURCE_TITLE_MAX).default(''),
-});
-
-export const addressRecordSchema = z.object({
-  key: accountKeySchema,
+/** Per-chain context (chain-level note, confidence, sources - never shared). */
+export const chainContextSchema = z.object({
   chainId: chainIdSchema,
-  address: evmAddressSchema,
-  label: z.string().min(1).max(LABEL_MAX),
   note: z.string().max(NOTE_MAX),
   confidence: confidenceSchema,
   sources: z.array(researchSourceSchema).max(SOURCE_MAX_PER_RECORD),
@@ -91,21 +87,44 @@ export const addressRecordSchema = z.object({
   updatedAt: isoTimestampSchema,
 });
 
-/** Create DTO: address + chainId + editable fields. No key, no timestamps. */
-export const recordCreateInputSchema = z.object({
-  chainId: chainIdSchema,
+/** One global record per address. */
+export const addressRecordSchema = z.object({
+  key: addressKeySchema,
   address: evmAddressSchema,
   label: z.string().min(1).max(LABEL_MAX),
+  tags: tagsSchema,
+  note: z.string().max(NOTE_MAX),
+  chains: z.array(chainContextSchema).max(2),
+  createdAt: isoTimestampSchema,
+  updatedAt: isoTimestampSchema,
+});
+
+/** Source authored by the UI (no id, no createdAt). */
+export const sourceInputSchema = z.object({
+  url: httpUrlSchema,
+  title: z.string().max(SOURCE_TITLE_MAX).default(''),
+});
+
+/** Create DTO: address + first chain context + global fields. */
+export const recordCreateInputSchema = z.object({
+  address: evmAddressSchema,
+  chainId: chainIdSchema,
+  label: z.string().min(1).max(LABEL_MAX),
+  tags: tagsSchema.default([]),
   note: z.string().max(NOTE_MAX).default(''),
+  chainNote: z.string().max(NOTE_MAX).default(''),
   confidence: confidenceSchema,
   sources: sourcesInputArraySchema.default([]),
 });
 
-/** Update DTO: key + editable fields. Address/chain are immutable. */
+/** Update DTO: global fields + upsert one chain context (by chainId). */
 export const recordUpdateInputSchema = z.object({
-  key: accountKeySchema,
+  key: addressKeySchema,
+  chainId: chainIdSchema,
   label: z.string().min(1).max(LABEL_MAX),
+  tags: tagsSchema.default([]),
   note: z.string().max(NOTE_MAX).default(''),
+  chainNote: z.string().max(NOTE_MAX).default(''),
   confidence: confidenceSchema,
   sources: sourcesInputArraySchema.default([]),
 });
@@ -132,7 +151,7 @@ export const pageContextSchema = z.object({
   pageTitle: z.string().max(PAGE_TITLE_MAX),
   site: z.enum(['etherscan', 'basescan']),
   chainId: chainIdSchema,
-  accountKeys: z.array(accountKeySchema).max(ACCOUNT_KEYS_MAX),
+  addressKeys: z.array(addressKeySchema).max(ACCOUNT_KEYS_MAX),
   observedAt: isoTimestampSchema,
 });
 
@@ -142,15 +161,15 @@ export const requestMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('PAGE_CONTEXT_GET'), payload: z.object({ tabId: z.number().int().nonnegative() }) }),
   z.object({ type: z.literal('RECORDS_GET_MANY'), payload: keysPayloadSchema }),
   z.object({ type: z.literal('RECORD_LIST') }),
-  z.object({ type: z.literal('RECORD_GET'), payload: z.object({ key: accountKeySchema }) }),
+  z.object({ type: z.literal('RECORD_GET'), payload: z.object({ key: addressKeySchema }) }),
   z.object({ type: z.literal('RECORD_CREATE'), payload: recordCreateInputSchema }),
   z.object({ type: z.literal('RECORD_UPDATE'), payload: recordUpdateInputSchema }),
-  z.object({ type: z.literal('RECORD_DELETE'), payload: z.object({ key: accountKeySchema }) }),
+  z.object({ type: z.literal('RECORD_DELETE'), payload: z.object({ key: addressKeySchema }) }),
   z.object({ type: z.literal('DATA_EXPORT') }),
   z.object({ type: z.literal('DATA_IMPORT'), payload: traceMemoImportPayloadSchema }),
   z.object({ type: z.literal('DATA_IMPORT_PREVIEW'), payload: traceMemoImportPayloadSchema }),
   z.object({ type: z.literal('DATA_CLEAR') }),
   z.object({ type: z.literal('SETTINGS_GET') }),
   z.object({ type: z.literal('SETTINGS_UPDATE'), payload: settingsSchema.partial() }),
-  z.object({ type: z.literal('OPEN_RECORD'), payload: z.object({ key: accountKeySchema }) }),
+  z.object({ type: z.literal('OPEN_RECORD'), payload: z.object({ key: addressKeySchema, chainId: chainIdSchema }) }),
 ]);

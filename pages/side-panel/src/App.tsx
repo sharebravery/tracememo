@@ -7,13 +7,14 @@ import { TABS } from './routes';
 import { PENDING_RECORD_STORAGE_KEY } from '@extension/shared';
 import { useEffect, useState } from 'react';
 import type { TabId } from './routes';
-import type { AccountKey } from '@extension/shared';
+import type { AddressKey, SupportedChainId } from '@extension/shared';
 
 type ReadyState = { onboarding: boolean } | { loading: true };
 
 const App = () => {
   const [tab, setTab] = useState<TabId>('library');
-  const [pendingKey, setPendingKey] = useState<AccountKey | undefined>(undefined);
+  const [pendingKey, setPendingKey] = useState<AddressKey | undefined>(undefined);
+  const [pendingChainId, setPendingChainId] = useState<SupportedChainId | undefined>(undefined);
   const [ready, setReady] = useState<ReadyState>({ loading: true });
 
   useEffect(() => {
@@ -26,11 +27,13 @@ const App = () => {
         setReady({ onboarding: false });
       }
 
-      // If the side panel was opened from an annotation click, focus that record.
+      // If the side panel was opened from an annotation click, focus that record
+      // on the chain the click came from.
       const data = await chrome.storage.session.get(PENDING_RECORD_STORAGE_KEY);
-      const key = data[PENDING_RECORD_STORAGE_KEY] as AccountKey | undefined;
-      if (key) {
-        setPendingKey(key);
+      const pending = data[PENDING_RECORD_STORAGE_KEY] as { key: AddressKey; chainId: SupportedChainId } | undefined;
+      if (pending) {
+        setPendingKey(pending.key);
+        setPendingChainId(pending.chainId);
         setTab('library');
         void chrome.storage.session.remove(PENDING_RECORD_STORAGE_KEY);
       }
@@ -77,7 +80,7 @@ const App = () => {
 
       <main className="flex-1 overflow-y-auto p-4">
         {tab === 'current' && <CurrentPageView />}
-        {tab === 'library' && <LibraryView initialEditKey={pendingKey} />}
+        {tab === 'library' && <LibraryView initialEditKey={pendingKey} initialEditChainId={pendingChainId} />}
         {tab === 'settings' && <SettingsView />}
       </main>
     </div>

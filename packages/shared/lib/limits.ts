@@ -7,6 +7,8 @@
  */
 export const LABEL_MAX = 60;
 export const NOTE_MAX = 2000;
+export const TAGS_MAX = 20;
+export const TAG_MAX_LENGTH = 40;
 export const SOURCE_MAX_PER_RECORD = 50;
 export const SOURCE_URL_MAX = 2048;
 export const SOURCE_TITLE_MAX = 300;

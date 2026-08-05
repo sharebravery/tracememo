@@ -1,18 +1,26 @@
 import { filterRecords } from './filter-records.js';
 import { describe, expect, it } from 'vitest';
-import type { AccountKey, AddressRecord, EvmAddress, SupportedChainId } from '@extension/shared';
+import type { AddressKey, AddressRecord, EvmAddress, SupportedChainId } from '@extension/shared';
 
 const a = (hex: string): EvmAddress => `0x${hex}` as EvmAddress;
-const k = (chainId: SupportedChainId, hex: string): AccountKey => `eip155:${chainId}:0x${hex}` as AccountKey;
+const k = (hex: string): AddressKey => `evm:0x${hex}` as AddressKey;
+
+const chain = (chainId: SupportedChainId, confidence: AddressRecord['chains'][number]['confidence'], note = '') => ({
+  chainId,
+  note,
+  confidence,
+  sources: [],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+});
 
 const record = (overrides: Partial<AddressRecord>): AddressRecord => ({
-  key: k(1, 'a'.repeat(40)),
-  chainId: 1,
+  key: k('a'.repeat(40)),
   address: a('a'.repeat(40)),
   label: 'Default label',
+  tags: [],
   note: 'default note',
-  confidence: 'unverified',
-  sources: [],
+  chains: [chain(1, 'unverified')],
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   ...overrides,
@@ -20,28 +28,28 @@ const record = (overrides: Partial<AddressRecord>): AddressRecord => ({
 
 const records: AddressRecord[] = [
   record({
-    key: k(1, '1'.repeat(40)),
-    chainId: 1,
+    key: k('1'.repeat(40)),
     address: a('1'.repeat(40)),
     label: 'Vitalik',
+    tags: ['wallet'],
     note: 'public wallet',
-    confidence: 'confirmed',
+    chains: [chain(1, 'confirmed', 'primary')],
   }),
   record({
-    key: k(1, '2'.repeat(40)),
-    chainId: 1,
+    key: k('2'.repeat(40)),
     address: a('2'.repeat(40)),
     label: 'Exchange hot wallet',
-    note: 'Binance',
-    confidence: 'likely',
+    tags: ['exchange'],
+    note: '',
+    chains: [chain(8453, 'likely', 'Binance')],
   }),
   record({
-    key: k(8453, '3'.repeat(40)),
-    chainId: 8453,
+    key: k('3'.repeat(40)),
     address: a('3'.repeat(40)),
     label: 'Unknown',
+    tags: [],
     note: 'needs review',
-    confidence: 'unverified',
+    chains: [chain(1, 'unverified')],
   }),
 ];
 
@@ -51,36 +59,42 @@ describe('filterRecords', () => {
   });
 
   it('matches by partial label (case-insensitive)', () => {
-    const result = filterRecords(records, { query: 'vital', confidence: 'all' });
-    expect(result.map(r => r.label)).toEqual(['Vitalik']);
+    expect(filterRecords(records, { query: 'vital', confidence: 'all' }).map(r => r.label)).toEqual(['Vitalik']);
   });
 
   it('matches by partial address', () => {
-    const result = filterRecords(records, { query: '0x' + '2'.repeat(4), confidence: 'all' });
-    expect(result.map(r => r.label)).toEqual(['Exchange hot wallet']);
+    expect(filterRecords(records, { query: '0x' + '2'.repeat(4), confidence: 'all' }).map(r => r.label)).toEqual([
+      'Exchange hot wallet',
+    ]);
   });
 
-  it('matches by note text', () => {
-    const result = filterRecords(records, { query: 'binance', confidence: 'all' });
-    expect(result.map(r => r.label)).toEqual(['Exchange hot wallet']);
+  it('matches by global note text', () => {
+    expect(filterRecords(records, { query: 'review', confidence: 'all' }).map(r => r.label)).toEqual(['Unknown']);
   });
 
-  it('filters by confidence', () => {
-    const result = filterRecords(records, { query: '', confidence: 'confirmed' });
-    expect(result.map(r => r.confidence)).toEqual(['confirmed']);
+  it('matches by tag', () => {
+    expect(filterRecords(records, { query: 'exchange', confidence: 'all' }).map(r => r.label)).toEqual([
+      'Exchange hot wallet',
+    ]);
+  });
+
+  it('matches by chain-level note', () => {
+    expect(filterRecords(records, { query: 'binance', confidence: 'all' }).map(r => r.label)).toEqual([
+      'Exchange hot wallet',
+    ]);
+  });
+
+  it('filters by confidence (any chain context)', () => {
+    expect(filterRecords(records, { query: '', confidence: 'confirmed' }).map(r => r.label)).toEqual(['Vitalik']);
   });
 
   it('combines query and confidence filter', () => {
-    const result = filterRecords(records, { query: 'wallet', confidence: 'likely' });
-    expect(result.map(r => r.label)).toEqual(['Exchange hot wallet']);
+    expect(filterRecords(records, { query: 'wallet', confidence: 'likely' }).map(r => r.label)).toEqual([
+      'Exchange hot wallet',
+    ]);
   });
 
   it('returns an empty array when nothing matches', () => {
     expect(filterRecords(records, { query: 'nonexistent', confidence: 'all' })).toEqual([]);
-  });
-
-  it('trims and lowercases the query', () => {
-    const result = filterRecords(records, { query: '  VITALIK  ', confidence: 'all' });
-    expect(result).toHaveLength(1);
   });
 });

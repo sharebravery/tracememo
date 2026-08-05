@@ -1,5 +1,5 @@
 import type {
-  AccountKey,
+  AddressKey,
   AddressRecord,
   ImportPreview,
   ImportResult,
@@ -8,6 +8,7 @@ import type {
   RecordCreateInput,
   RecordUpdateInput,
   Settings,
+  SupportedChainId,
   TraceMemoExport,
 } from '../domain/index.js';
 
@@ -22,19 +23,19 @@ import type {
 export type RequestMessage =
   | { type: 'PAGE_CONTEXT_SET'; payload: PageContextInput }
   | { type: 'PAGE_CONTEXT_GET'; payload: { tabId: number } }
-  | { type: 'RECORDS_GET_MANY'; payload: { keys: AccountKey[] } }
+  | { type: 'RECORDS_GET_MANY'; payload: { keys: AddressKey[] } }
   | { type: 'RECORD_LIST' }
-  | { type: 'RECORD_GET'; payload: { key: AccountKey } }
+  | { type: 'RECORD_GET'; payload: { key: AddressKey } }
   | { type: 'RECORD_CREATE'; payload: RecordCreateInput }
   | { type: 'RECORD_UPDATE'; payload: RecordUpdateInput }
-  | { type: 'RECORD_DELETE'; payload: { key: AccountKey } }
+  | { type: 'RECORD_DELETE'; payload: { key: AddressKey } }
   | { type: 'DATA_EXPORT' }
   | { type: 'DATA_IMPORT'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_IMPORT_PREVIEW'; payload: { data: TraceMemoExport } }
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
   | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
-  | { type: 'OPEN_RECORD'; payload: { key: AccountKey } };
+  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId: SupportedChainId } };
 
 /** Response envelope. Errors never carry stack traces or user record content. */
 export type ResponseMessage<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } };

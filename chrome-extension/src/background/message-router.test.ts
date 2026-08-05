@@ -1,7 +1,7 @@
 import { handleMessage } from './message-router.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { RecordsRepository } from '@extension/research-db';
-import type { AccountKey, PageContextInput, ResponseMessage } from '@extension/shared';
+import type { AddressKey, PageContextInput, ResponseMessage } from '@extension/shared';
 import type { SettingsStorageType } from '@extension/storage';
 
 /** In-memory chrome.storage.session mock. */
@@ -48,7 +48,7 @@ const pageContext = (overrides: Partial<PageContextInput> = {}): PageContextInpu
   pageTitle: 'Etherscan',
   site: 'etherscan',
   chainId: 1,
-  accountKeys: [('eip155:1:0x' + 'a'.repeat(40)) as AccountKey],
+  addressKeys: [('evm:0x' + 'a'.repeat(40)) as AddressKey],
   observedAt: '2026-01-01T00:00:00.000Z',
   ...overrides,
 });
@@ -73,7 +73,7 @@ describe('per-tab page context isolation', () => {
       pageTitle: 'B',
       site: 'basescan',
       chainId: 8453,
-      accountKeys: [('eip155:8453:0x' + 'b'.repeat(40)) as AccountKey],
+      addressKeys: [('evm:0x' + 'b'.repeat(40)) as AddressKey],
     });
 
     await handleMessage(

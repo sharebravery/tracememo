@@ -5,7 +5,7 @@
 
 ## Global rule
 
-Records are chain-aware: the canonical key is `eip155:<chainId>:<lowercase address>` (Ethereum Mainnet = 1, Base = 8453). The same address on different chains is never merged. Page context is isolated per Chrome tab.
+Records are one global entry per EVM address: the canonical key is `evm:<lowercase address>` and holds a shared label/tags/note plus independent per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label but NOT the chain-level note, confidence, or sources. Page context is isolated per Chrome tab.
 
 The canonical command set (used by CI and every milestone's acceptance) is: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm build`, and `pnpm zip`. Do not introduce conflicting commands or version pins.
 
@@ -144,7 +144,7 @@ Do not add BaseScan until Etherscan fixture and real-page smoke tests pass.
 
 ### Goal
 
-Prove a consistent workflow across Etherscan and BaseScan (chain-specific records, no cross-chain merge) and finish the evidence-backed workflow.
+Prove a consistent workflow across Etherscan and BaseScan (one global record per address; per-chain note/confidence/sources are independent; the shared label is the same across chains) and finish the evidence-backed workflow.
 
 ### Tasks
 
@@ -160,8 +160,9 @@ Prove a consistent workflow across Etherscan and BaseScan (chain-specific record
 
 ### Acceptance criteria
 
-- [ ] a record saved on Ethereum does not appear on Base for the same address, and vice versa.
-- [ ] the same address can be saved separately on each chain.
+- [ ] one global record per address is shown in the Library.
+- [ ] the shared label appears on both Etherscan and BaseScan for the same address.
+- [ ] chain-level note, confidence, and sources are independent per chain and are not copied across chains.
 - [ ] sources are clearly separated from the user's conclusion.
 - [ ] confidence defaults to `unverified`.
 - [ ] no confidence state looks like an official platform verification.

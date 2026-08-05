@@ -35,7 +35,7 @@ Therefore, TraceMemo must not compete as “another address replacer.” Its wed
 1. **Evidence-backed notes** — every attribution can retain its source.
 2. **Confidence-aware research** — confirmed and speculative claims are visibly different.
 3. **Local-first ownership** — no account or cloud is required for the core workflow.
-4. **Cross-explorer continuity** — the same private record follows the address across supported explorers.
+4. **Consistent workflow across supported explorers** - one global record per EVM address (shared label, tags, and global note) holds independent per-chain contexts (chain-level note, confidence, sources). The same address on Ethereum Mainnet and Base shares the global label but NOT the chain-level note, confidence, or sources. The same address is not assumed to have the same contract code, purpose, or state across chains.
 5. **Portable data** — the user can export and re-import the full research library.
 
 ### 2.1 Positioning statement
@@ -105,7 +105,7 @@ Both are implemented through one Etherscan-family adapter with site configuratio
 
 - valid 20-byte EVM address in `0x` hexadecimal form;
 - normalized to checksum format for display;
-- canonical lookup key uses lowercase address.
+- canonical lookup key is `evm:<lowercase address>` - one global record per address. The chain id is NOT part of the key; each record holds per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label/tags/note but NOT the chain-level note, confidence, or sources;
 
 MVP does not support ENS, transaction hashes, Solana addresses, Bitcoin addresses, or other chain-specific identifiers.
 
@@ -115,14 +115,25 @@ Each record contains:
 
 | Field | Required | Rule |
 |---|---:|---|
+Global record (one per address):
+
+| Field | Required | Rule |
+|---|---:|---|
 | Address | Yes | Valid EVM address |
-| Chain | Yes | Ethereum Mainnet (1) or Base (8453) |
-| Label | Yes | 1–60 characters |
-| Note | No | Maximum 2,000 characters |
-| Confidence | Yes | `confirmed`, `likely`, or `unverified` |
-| Sources | No | URL plus captured page title and creation time |
+| Label | Yes | 1–60 characters, shared across chains |
+| Tags | No | Up to 20 tags, shared across chains |
+| Global note | No | Maximum 2,000 characters, shared across chains |
 | Created at | Yes | ISO timestamp |
 | Updated at | Yes | ISO timestamp |
+
+Per-chain context (Ethereum and/or Base, independent):
+
+| Field | Required | Rule |
+|---|---:|---|
+| Chain id | Yes | Ethereum Mainnet (1) or Base (8453) |
+| Chain note | No | Maximum 2,000 characters, per chain |
+| Confidence | Yes | `confirmed`, `likely`, or `unverified`, per chain |
+| Sources | No | URL plus captured page title and creation time, per chain |
 
 No custom tags, entity groups, risk score, or relationship graph in MVP.
 
@@ -170,7 +181,7 @@ From Current Page, the user can select a detected address and enter:
 - confidence;
 - source.
 
-When creating a record manually from the Library, the user must choose the chain (Ethereum or Base). The chain is fixed once the record is saved.
+A record is one global entry per address. When creating a record, the user chooses the chain (Ethereum or Base) for the first chain context and enters the shared label/tags/global note plus the chain-level note/confidence/sources. Additional chain contexts can be added later. The Library shows one record per address.
 
 The current page URL and title are offered as the default source. The user can remove the source before saving.
 

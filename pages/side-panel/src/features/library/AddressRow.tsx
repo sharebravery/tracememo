@@ -4,7 +4,7 @@ import type { AddressRecord, Confidence } from '@extension/shared';
 
 interface AddressRowProps {
   record: AddressRecord;
-  onEdit: () => void;
+  onEdit: (chainId: number) => void;
   onDelete: () => void;
 }
 
@@ -30,7 +30,8 @@ const copyAddress = async (address: string) => {
 };
 
 export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => {
-  const sourceCount = record.sources.length;
+  const chains = record.chains;
+  const primary = chains[0];
 
   return (
     <li className="rounded border border-slate-200 bg-white p-3 shadow-sm">
@@ -43,14 +44,13 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => {
               aria-label="Your private note, not a platform verification">
               Private
             </span>
-            <span className="shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
-              {CHAIN_LABELS[record.chainId]}
-            </span>
-            <span
-              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CONFIDENCE_BADGE_CLASS[record.confidence]}`}
-              aria-label={`Confidence: ${CONFIDENCE_LABEL[record.confidence]} (your own assessment)`}>
-              {CONFIDENCE_LABEL[record.confidence]}
-            </span>
+            {primary && (
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${CONFIDENCE_BADGE_CLASS[primary.confidence]}`}
+                aria-label={`Confidence on ${CHAIN_LABELS[primary.chainId]}: ${CONFIDENCE_LABEL[primary.confidence]} (your own assessment)`}>
+                {CONFIDENCE_LABEL[primary.confidence]}
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -59,36 +59,35 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => {
             title={`Copy address ${record.address}`}>
             {record.address}
           </button>
+          {record.tags.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {record.tags.map(tag => (
+                <span key={tag} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {record.note && <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-slate-600">{record.note}</p>}
         </div>
       </div>
 
-      {record.note && <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-slate-600">{record.note}</p>}
-
-      {sourceCount > 0 && (
-        <details className="mt-1">
-          <summary className="cursor-pointer text-[10px] text-slate-500 hover:text-slate-700 focus:outline-none focus-visible:underline">
-            {sourceCount} source{sourceCount > 1 ? 's' : ''}
-          </summary>
-          <ul className="mt-1 flex flex-col gap-0.5">
-            {record.sources.map(source => (
-              <li key={source.id} className="min-w-0">
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block max-w-full truncate text-[11px] text-blue-600 hover:underline">
-                  {source.title || source.url}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <div className="mt-1 flex flex-wrap gap-1">
+        {chains.map(ctx => (
+          <button
+            key={ctx.chainId}
+            type="button"
+            onClick={() => onEdit(ctx.chainId)}
+            className="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+            {CHAIN_LABELS[ctx.chainId]}
+          </button>
+        ))}
+      </div>
 
       <div className="mt-2 flex items-center gap-3">
         <button
           type="button"
-          onClick={onEdit}
+          onClick={() => onEdit(chains[0]?.chainId ?? 1)}
           className="text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none focus-visible:underline">
           Edit
         </button>

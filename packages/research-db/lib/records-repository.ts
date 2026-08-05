@@ -1,6 +1,6 @@
 import { applyImport, buildExportEnvelope, previewImport } from './import-export.js';
 import type { TraceMemoDatabase } from './schema.js';
-import type { AccountKey, AddressRecord, ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
+import type { AddressKey, AddressRecord, ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
 
 /**
  * Records repository - the only layer that reads and writes the records store.
@@ -11,10 +11,10 @@ import type { AccountKey, AddressRecord, ImportPreview, ImportResult, TraceMemoE
  */
 export interface RecordsRepository {
   list(): Promise<AddressRecord[]>;
-  get(key: AccountKey): Promise<AddressRecord | undefined>;
-  getMany(keys: AccountKey[]): Promise<AddressRecord[]>;
+  get(key: AddressKey): Promise<AddressRecord | undefined>;
+  getMany(keys: AddressKey[]): Promise<AddressRecord[]>;
   upsert(record: AddressRecord): Promise<AddressRecord>;
-  remove(key: AccountKey): Promise<void>;
+  remove(key: AddressKey): Promise<void>;
   clear(): Promise<void>;
   exportAll(): Promise<TraceMemoExport>;
   importAll(input: TraceMemoExport): Promise<ImportResult>;

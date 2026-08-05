@@ -1,8 +1,8 @@
 import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
 import { sendMessage } from '../../messaging';
-import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD } from '@extension/shared';
-import { useState } from 'react';
+import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD, TAGS_MAX } from '@extension/shared';
+import { useMemo, useState } from 'react';
 import type {
   AddressRecord,
   Confidence,
@@ -23,6 +23,13 @@ interface RecordEditorProps {
   onCancel: () => void;
 }
 
+const parseTags = (text: string): string[] =>
+  text
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+    .slice(0, TAGS_MAX);
+
 export const RecordEditor = ({
   mode,
   initial,
@@ -33,16 +40,30 @@ export const RecordEditor = ({
   onCancel,
 }: RecordEditorProps) => {
   const isEdit = mode === 'update';
-  const [chainId, setChainId] = useState<SupportedChainId>(initial?.chainId ?? initialChainId ?? 1);
+  const firstChainId = initialChainId ?? 1;
+
+  const [chainId, setChainId] = useState<SupportedChainId>(firstChainId);
   const [address, setAddress] = useState(initial?.address ?? initialAddress ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
+  const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
-  const [confidence, setConfidence] = useState<Confidence>(initial?.confidence ?? 'unverified');
+
+  const initialChain = useMemo(() => initial?.chains.find(c => c.chainId === firstChainId), [initial, firstChainId]);
+  const [chainNote, setChainNote] = useState(initialChain?.note ?? '');
+  const [confidence, setConfidence] = useState<Confidence>(initialChain?.confidence ?? 'unverified');
   const [sources, setSources] = useState<SourceInput[]>(
-    initial?.sources.map(s => ({ url: s.url, title: s.title })) ?? defaultSources ?? [],
+    initialChain?.sources.map(s => ({ url: s.url, title: s.title })) ?? defaultSources ?? [],
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const switchChain = (next: SupportedChainId) => {
+    setChainId(next);
+    const ctx = initial?.chains.find(c => c.chainId === next);
+    setChainNote(ctx?.note ?? '');
+    setConfidence(ctx?.confidence ?? 'unverified');
+    setSources(ctx ? ctx.sources.map(s => ({ url: s.url, title: s.title })) : []);
+  };
 
   const validate = (): string | null => {
     if (!isEvmAddress(address)) {
@@ -53,10 +74,13 @@ export const RecordEditor = ({
       return `Label must be 1-${LABEL_MAX} characters.`;
     }
     if (note.length > NOTE_MAX) {
-      return `Note must be ${NOTE_MAX} characters or fewer.`;
+      return `Global note must be ${NOTE_MAX} characters or fewer.`;
+    }
+    if (chainNote.length > NOTE_MAX) {
+      return `Chain note must be ${NOTE_MAX} characters or fewer.`;
     }
     if (sources.length > SOURCE_MAX_PER_RECORD) {
-      return `A record may have at most ${SOURCE_MAX_PER_RECORD} sources.`;
+      return `A chain context may have at most ${SOURCE_MAX_PER_RECORD} sources.`;
     }
     return null;
   };
@@ -71,22 +95,28 @@ export const RecordEditor = ({
     setSaving(true);
     setError(null);
 
+    const tags = parseTags(tagsText);
     try {
       if (isEdit && initial) {
         const input: RecordUpdateInput = {
           key: initial.key,
+          chainId,
           label: label.trim(),
+          tags,
           note,
+          chainNote,
           confidence,
           sources,
         };
         await sendMessage({ type: 'RECORD_UPDATE', payload: input });
       } else {
         const input: RecordCreateInput = {
-          chainId,
           address: address as EvmAddress,
+          chainId,
           label: label.trim(),
+          tags,
           note,
+          chainNote,
           confidence,
           sources,
         };
@@ -112,27 +142,6 @@ export const RecordEditor = ({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-chain" className="text-xs font-medium text-slate-600">
-          Chain
-        </label>
-        <select
-          id="tracememo-chain"
-          value={chainId}
-          onChange={event => setChainId(Number(event.target.value) as SupportedChainId)}
-          disabled={isEdit}
-          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500">
-          {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
-            <option key={id} value={id}>
-              {CHAIN_LABELS[id]}
-            </option>
-          ))}
-        </select>
-        <p className="text-[11px] text-slate-400">
-          A record is specific to one chain. The same address on Ethereum and Base is separate.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-1">
         <label htmlFor="tracememo-address" className="text-xs font-medium text-slate-600">
           Address
         </label>
@@ -148,13 +157,13 @@ export const RecordEditor = ({
           className="w-full rounded border border-slate-300 px-2 py-1.5 font-mono text-xs read-only:bg-slate-100 read-only:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         {isEdit && (
-          <p className="text-[11px] text-slate-400">The address and chain cannot be changed on an existing record.</p>
+          <p className="text-[11px] text-slate-400">One global record per address; the address cannot change.</p>
         )}
       </div>
 
       <div className="flex flex-col gap-1">
         <label htmlFor="tracememo-label" className="text-xs font-medium text-slate-600">
-          Label
+          Label (shared across chains)
         </label>
         <input
           id="tracememo-label"
@@ -170,27 +179,80 @@ export const RecordEditor = ({
         </p>
       </div>
 
-      <ConfidenceSelect value={confidence} onChange={setConfidence} />
+      <div className="flex flex-col gap-1">
+        <label htmlFor="tracememo-tags" className="text-xs font-medium text-slate-600">
+          Tags (shared, comma-separated)
+        </label>
+        <input
+          id="tracememo-tags"
+          type="text"
+          value={tagsText}
+          onChange={event => setTagsText(event.target.value)}
+          placeholder="wallet, exchange, suspicious"
+          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <p className="text-[11px] text-slate-400">Up to {TAGS_MAX} tags; shared across chains.</p>
+      </div>
 
       <div className="flex flex-col gap-1">
         <label htmlFor="tracememo-note" className="text-xs font-medium text-slate-600">
-          Note (optional)
+          Global note (shared across chains)
         </label>
         <textarea
           id="tracememo-note"
           value={note}
           onChange={event => setNote(event.target.value)}
           maxLength={NOTE_MAX}
-          rows={4}
-          placeholder="Why does this address matter? What did you find?"
+          rows={2}
+          placeholder="Notes that apply to this address on every chain"
           className="w-full resize-y rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
-        <p className="text-[11px] text-slate-400">
-          {note.length}/{NOTE_MAX}
-        </p>
       </div>
 
-      <SourceList sources={sources} onChange={setSources} />
+      <div className="rounded border border-slate-200 bg-slate-50 p-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="tracememo-chain" className="text-xs font-medium text-slate-600">
+            Chain context
+          </label>
+          <select
+            id="tracememo-chain"
+            value={chainId}
+            onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
+            className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
+              <option key={id} value={id}>
+                {CHAIN_LABELS[id]}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-400">
+            Note, confidence, and sources are stored per chain and are not shared.
+          </p>
+        </div>
+
+        <div className="mt-2">
+          <ConfidenceSelect value={confidence} onChange={setConfidence} />
+        </div>
+
+        <div className="mt-2 flex flex-col gap-1">
+          <label htmlFor="tracememo-chain-note" className="text-xs font-medium text-slate-600">
+            Chain note
+          </label>
+          <textarea
+            id="tracememo-chain-note"
+            value={chainNote}
+            onChange={event => setChainNote(event.target.value)}
+            maxLength={NOTE_MAX}
+            rows={3}
+            placeholder={`Notes specific to ${CHAIN_LABELS[chainId]}`}
+            className="w-full resize-y rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <div className="mt-2">
+          <SourceList sources={sources} onChange={setSources} />
+        </div>
+      </div>
 
       {error && <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{error}</p>}
 

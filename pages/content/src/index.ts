@@ -3,10 +3,10 @@ import { removeAnnotations } from './annotation/remove-labels.js';
 import { renderAnnotations } from './annotation/render-label.js';
 import { scanAddresses } from './detection/scan-addresses.js';
 import { sendMessage } from './messaging.js';
-import { toAccountKey } from '@extension/shared';
+import { toAddressKey } from '@extension/shared';
 import { DEFAULT_SETTINGS_STATE, SETTINGS_STORAGE_KEY } from '@extension/storage';
 import type { ExplorerSite } from './adapter/sites.js';
-import type { AccountKey, AddressRecord, PageContextInput, SupportedChainId } from '@extension/shared';
+import type { AddressKey, AddressRecord, PageContextInput, SupportedChainId } from '@extension/shared';
 
 const DEBOUNCE_MS = 300;
 const MAX_ADAPTER_ERRORS = 5;
@@ -15,28 +15,28 @@ const OBSERVER_OPTIONS: MutationObserverInit = { childList: true, subtree: true,
 
 let site: ExplorerSite | null = null;
 let chainId: SupportedChainId = 1;
-let recordMap = new Map<AccountKey, AddressRecord>();
+let recordMap = new Map<AddressKey, AddressRecord>();
 let observer: MutationObserver | undefined;
 let rescanTimer: ReturnType<typeof setTimeout> | undefined;
 let adapterErrors = 0;
 let running = false;
 let annotationsEnabled = DEFAULT_SETTINGS_STATE.annotationsEnabled;
 
-const buildPageContext = (accountKeys: AccountKey[]): PageContextInput => ({
+const buildPageContext = (addressKeys: AddressKey[]): PageContextInput => ({
   tabUrl: location.href.slice(0, 2048),
   pageTitle: document.title.slice(0, 300),
   site: (site as ExplorerSite).id,
   chainId,
-  accountKeys,
+  addressKeys,
   observedAt: new Date().toISOString(),
 });
 
-const syncRecords = async (accountKeys: AccountKey[]): Promise<void> => {
-  if (accountKeys.length === 0) {
+const syncRecords = async (addressKeys: AddressKey[]): Promise<void> => {
+  if (addressKeys.length === 0) {
     recordMap = new Map();
     return;
   }
-  const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: accountKeys } });
+  const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: addressKeys } });
   recordMap = new Map(records.map(record => [record.key, record]));
 };
 
@@ -45,12 +45,11 @@ const render = (): void => {
   observer.disconnect();
   try {
     renderAnnotations(document.body, {
-      chainId,
       hasRecord: key => recordMap.get(key),
       onOpen: key => {
-        void sendMessage({ type: 'OPEN_RECORD', payload: { key } }).catch(() => {
+        void sendMessage({ type: 'OPEN_RECORD', payload: { key, chainId } }).catch(() => {
           // Opening the side panel may fail without a fresh user gesture; the
-          // pending key is still stored by the background as a fallback.
+          // pending key + chainId are still stored by the background as a fallback.
         });
       },
     });
@@ -72,9 +71,9 @@ const rescan = async (): Promise<void> => {
   running = true;
   try {
     const addresses = scanAddresses(document.body);
-    const accountKeys = addresses.map(address => toAccountKey(chainId, address));
-    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(accountKeys) });
-    await syncRecords(accountKeys);
+    const addressKeys = addresses.map(address => toAddressKey(address));
+    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(addressKeys) });
+    await syncRecords(addressKeys);
     render();
   } catch {
     adapterErrors += 1;
@@ -124,8 +123,8 @@ const onStorageChanged = (changes: { [key: string]: chrome.storage.StorageChange
 
 /**
  * Entry point. Detects the site (and chain id), scans once, renders
- * chain-aware annotations, and starts a debounced MutationObserver for dynamic
- * content. Annotations honor the `annotationsEnabled` setting and are removed
+ * annotations, and starts a debounced MutationObserver for dynamic content.
+ * Annotations honor the `annotationsEnabled` setting and are removed
  * immediately when disabled. Fails safely: repeated adapter errors halt the
  * observer without breaking page controls.
  */

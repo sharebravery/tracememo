@@ -5,10 +5,10 @@ import { SearchInput } from './SearchInput';
 import { sendMessage } from '../../messaging';
 import { RecordEditor } from '../record-editor/RecordEditor';
 import { useEffect, useState } from 'react';
-import type { AccountKey, AddressRecord, Confidence } from '@extension/shared';
+import type { AddressKey, AddressRecord, Confidence, SupportedChainId } from '@extension/shared';
 
 type ConfidenceFilter = Confidence | 'all';
-type EditingState = { mode: 'create' } | { mode: 'update'; record: AddressRecord } | null;
+type EditingState = { mode: 'create' } | { mode: 'update'; record: AddressRecord; chainId: SupportedChainId } | null;
 
 const CONFIDENCE_FILTER_OPTIONS: { value: ConfidenceFilter; label: string }[] = [
   { value: 'all', label: 'All confidence' },
@@ -18,11 +18,12 @@ const CONFIDENCE_FILTER_OPTIONS: { value: ConfidenceFilter; label: string }[] = 
 ];
 
 interface LibraryViewProps {
-  /** When set, open this record in the editor on mount (from an annotation click). */
-  initialEditKey?: AccountKey;
+  /** When set, open this record on mount (from an annotation click). */
+  initialEditKey?: AddressKey;
+  initialEditChainId?: SupportedChainId;
 }
 
-export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
+export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewProps = {}) => {
   const [records, setRecords] = useState<AddressRecord[] | null>(null);
   const [query, setQuery] = useState('');
   const [confidence, setConfidence] = useState<ConfidenceFilter>('all');
@@ -46,7 +47,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
         try {
           const record = await sendMessage({ type: 'RECORD_GET', payload: { key: initialEditKey } });
           if (record) {
-            setEditing({ mode: 'update', record });
+            setEditing({ mode: 'update', record, chainId: initialEditChainId ?? record.chains[0]?.chainId ?? 1 });
           }
         } catch {
           // Pending record no longer exists; ignore.
@@ -71,6 +72,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
       <RecordEditor
         mode={editing.mode}
         initial={editing.mode === 'update' ? editing.record : undefined}
+        initialChainId={editing.mode === 'update' ? editing.chainId : undefined}
         onSaved={() => {
           setEditing(null);
           void refresh();
@@ -138,7 +140,7 @@ export const LibraryView = ({ initialEditKey }: LibraryViewProps = {}) => {
             <AddressRow
               key={record.key}
               record={record}
-              onEdit={() => setEditing({ mode: 'update', record })}
+              onEdit={chainId => setEditing({ mode: 'update', record, chainId: chainId as SupportedChainId })}
               onDelete={() => void handleDelete(record)}
             />
           ))}

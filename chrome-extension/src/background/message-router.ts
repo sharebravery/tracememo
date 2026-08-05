@@ -1,7 +1,7 @@
 import {
   ErrorCode,
   requestMessageSchema,
-  toAccountKey,
+  toAddressKey,
   toChecksumAddress,
   pageContextStorageKey,
   PENDING_RECORD_STORAGE_KEY,
@@ -9,6 +9,7 @@ import {
 import type { RecordsRepository } from '@extension/research-db';
 import type {
   AddressRecord,
+  ChainContext,
   PageContext,
   PageContextInput,
   RecordCreateInput,
@@ -33,7 +34,6 @@ import type { SettingsStorageType } from '@extension/storage';
  * Logging rule (section 12): production logs may contain only error code,
  * operation name, etc. - never address, label, note, or source content.
  */
-
 const CONTENT_ALLOWED = new Set<RequestMessage['type']>(['PAGE_CONTEXT_SET', 'RECORDS_GET_MANY', 'OPEN_RECORD']);
 
 const SIDE_PANEL_ALLOWED = new Set<RequestMessage['type']>([
@@ -82,16 +82,34 @@ const buildSources = (inputs: { url: string; title: string }[], now: string): Re
     createdAt: now,
   }));
 
+/** Error thrown for expected, user-facing failures (mapped to a response). */
+class RouterError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'RouterError';
+    this.code = code;
+  }
+}
+
 const createRecord = async (input: RecordCreateInput, repo: RecordsRepository): Promise<AddressRecord> => {
   const now = new Date().toISOString();
   const record: AddressRecord = {
-    key: toAccountKey(input.chainId, input.address),
-    chainId: input.chainId,
+    key: toAddressKey(input.address),
     address: toChecksumAddress(input.address),
     label: input.label,
+    tags: input.tags,
     note: input.note,
-    confidence: input.confidence,
-    sources: buildSources(input.sources, now),
+    chains: [
+      {
+        chainId: input.chainId,
+        note: input.chainNote,
+        confidence: input.confidence,
+        sources: buildSources(input.sources, now),
+        createdAt: now,
+        updatedAt: now,
+      },
+    ],
     createdAt: now,
     updatedAt: now,
   };
@@ -104,15 +122,27 @@ const updateRecord = async (input: RecordUpdateInput, repo: RecordsRepository): 
     throw new RouterError(ErrorCode.NOT_FOUND, 'Record not found');
   }
   const now = new Date().toISOString();
-  const record: AddressRecord = {
-    key: existing.key,
-    chainId: existing.chainId,
-    address: existing.address,
-    label: input.label,
-    note: input.note,
+  const existingChainIndex = existing.chains.findIndex(c => c.chainId === input.chainId);
+  const existingChain = existingChainIndex >= 0 ? existing.chains[existingChainIndex] : undefined;
+  const upsertedChain: ChainContext = {
+    chainId: input.chainId,
+    note: input.chainNote,
     confidence: input.confidence,
     sources: buildSources(input.sources, now),
-    createdAt: existing.createdAt,
+    createdAt: existingChain?.createdAt ?? now,
+    updatedAt: now,
+  };
+  const chains =
+    existingChainIndex >= 0
+      ? existing.chains.map((c, i) => (i === existingChainIndex ? upsertedChain : c))
+      : [...existing.chains, upsertedChain];
+
+  const record: AddressRecord = {
+    ...existing,
+    label: input.label,
+    tags: input.tags,
+    note: input.note,
+    chains,
     updatedAt: now,
   };
   return repo.upsert(record);
@@ -131,16 +161,6 @@ const updateSettings = async (patch: Partial<Settings>, settings: SettingsStorag
   await settings.set(prev => ({ ...prev, ...patch }));
   return settings.get();
 };
-
-/** Error thrown for expected, user-facing failures (mapped to a response). */
-class RouterError extends Error {
-  readonly code: string;
-  constructor(code: string, message: string) {
-    super(message);
-    this.name = 'RouterError';
-    this.code = code;
-  }
-}
 
 export interface RouterDeps {
   repo: RecordsRepository;
@@ -206,7 +226,6 @@ export const handleMessage = async (
         return { ok: true, data: await updateSettings(message.payload, deps.settings) };
 
       case 'PAGE_CONTEXT_SET': {
-        // Take the real tab id from the sender; never trust client input.
         const tabId = sender.tab?.id;
         if (tabId == null) {
           logFailure('PAGE_CONTEXT_SET', ErrorCode.FORBIDDEN);
@@ -221,7 +240,9 @@ export const handleMessage = async (
         return { ok: true, data: await getPageContext(message.payload.tabId) };
 
       case 'OPEN_RECORD':
-        await chrome.storage.session.set({ [PENDING_RECORD_STORAGE_KEY]: message.payload.key });
+        await chrome.storage.session.set({
+          [PENDING_RECORD_STORAGE_KEY]: { key: message.payload.key, chainId: message.payload.chainId },
+        });
         return { ok: true, data: { acknowledged: true as const } };
 
       default: {

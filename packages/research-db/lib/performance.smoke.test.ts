@@ -2,20 +2,27 @@ import 'fake-indexeddb/auto';
 import { createRecordsRepository } from './records-repository.js';
 import { TraceMemoDatabase } from './schema.js';
 import { describe, expect, it } from 'vitest';
-import type { AccountKey, AddressRecord, EvmAddress, SupportedChainId } from '@extension/shared';
+import type { AddressKey, AddressRecord, EvmAddress } from '@extension/shared';
 
 const a = (i: number): EvmAddress => `0x${i.toString(16).padStart(40, '0')}` as EvmAddress;
-const k = (i: number): AccountKey => `eip155:1:0x${i.toString(16).padStart(40, '0')}` as AccountKey;
-const CHAIN: SupportedChainId = 1;
+const k = (i: number): AddressKey => `evm:0x${i.toString(16).padStart(40, '0')}` as AddressKey;
 
 const makeRecord = (i: number): AddressRecord => ({
   key: k(i),
-  chainId: CHAIN,
   address: a(i),
   label: `Label ${i}`,
-  note: `research note ${i}`,
-  confidence: i % 3 === 0 ? 'confirmed' : i % 3 === 1 ? 'likely' : 'unverified',
-  sources: [],
+  tags: [],
+  note: `global note ${i}`,
+  chains: [
+    {
+      chainId: 1,
+      note: `chain note ${i}`,
+      confidence: i % 3 === 0 ? 'confirmed' : i % 3 === 1 ? 'likely' : 'unverified',
+      sources: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: `2026-0${(i % 9) + 1}-0${(i % 27) + 1}T00:00:00.000Z`,
+    },
+  ],
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: `2026-0${(i % 9) + 1}-0${(i % 27) + 1}T00:00:00.000Z`,
 });
