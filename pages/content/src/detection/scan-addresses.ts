@@ -30,7 +30,12 @@ export const isExcludedNode = (node: Node | null): boolean => {
       if (element instanceof HTMLElement && (element.isContentEditable || element.hasAttribute('contenteditable'))) {
         return true;
       }
-      if (element.closest?.(`[${DATA_ATTR}]`)) return true;
+      // Skip TraceMemo's OWN injected nodes (address wrappers, badges, cues) so
+      // they are never re-scanned. The host marker on <html> is NOT an injected
+      // node and must not exclude the whole document.
+      if (element.closest?.(`[${DATA_ATTR}="address"], [${DATA_ATTR}="annotation"], [${DATA_ATTR}="cue"]`)) {
+        return true;
+      }
     }
     current = current.parentNode;
   }

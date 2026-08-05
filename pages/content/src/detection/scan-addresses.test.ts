@@ -54,6 +54,15 @@ describe('scanAddresses', () => {
     expect(scanAddresses(document.body)).toEqual([]);
   });
 
+  it('still detects addresses when <html> has the data-tracememo host marker', () => {
+    // The content script marks <html> with data-tracememo="host". The exclusion
+    // check must NOT treat that as an injected node and skip the whole document.
+    document.documentElement.setAttribute('data-tracememo', 'host');
+    document.body.innerHTML = `<div>${ADDR_A}</div>`;
+    expect(scanAddresses(document.body).map(a => a.toLowerCase())).toEqual([ADDR_A.toLowerCase()]);
+    document.documentElement.removeAttribute('data-tracememo');
+  });
+
   it('caps the result at the given limit', () => {
     document.body.innerHTML = Array.from({ length: 10 }, (_, i) => `<span>${validAddress(i)}</span>`).join('');
     expect(scanAddresses(document.body, 3)).toHaveLength(3);
