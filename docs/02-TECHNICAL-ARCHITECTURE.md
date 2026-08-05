@@ -609,7 +609,7 @@ Minimum product components:
 ```ts
 interface TraceMemoExport {
   format: 'tracememo';
-  version: 1;
+  version: 2;
   exportedAt: string;
   records: AddressRecord[];
 }

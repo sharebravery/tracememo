@@ -87,20 +87,20 @@ export const DataManagement = () => {
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded border border-slate-200 bg-white p-3">
-      <h3 className="text-xs font-semibold text-slate-700">Backup &amp; data</h3>
+    <section className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <h3 className="text-xs font-semibold text-slate-200">Backup &amp; data</h3>
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => void handleExport()}
-          className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
           Export backup (.json)
         </button>
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
           Import backup…
         </button>
         <input
@@ -119,27 +119,27 @@ export const DataManagement = () => {
       </div>
 
       {importState && (
-        <div className="rounded bg-slate-50 p-2 text-xs text-slate-700">
-          <p className="font-medium">Import preview (all records valid)</p>
+        <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-2 text-xs text-slate-200">
+          <p className="font-medium text-violet-200">Import preview (all records valid)</p>
           <p>
             {importState.preview.total} record{importState.preview.total === 1 ? '' : 's'}:{' '}
             {importState.preview.created} new, {importState.preview.updated} to update, {importState.preview.skipped}{' '}
             kept (older or equal).
           </p>
-          <p className="mt-1 text-slate-500">
+          <p className="mt-1 text-slate-400">
             Writes happen in one transaction. If any record were invalid the whole file would be rejected.
           </p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
               onClick={() => void confirmImport()}
-              className="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+              className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
               Confirm import
             </button>
             <button
               type="button"
               onClick={() => setImportState(null)}
-              className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
               Cancel
             </button>
           </div>
@@ -147,39 +147,39 @@ export const DataManagement = () => {
       )}
 
       {importResult && (
-        <p className="rounded bg-emerald-50 px-2 py-1.5 text-xs text-emerald-800">
+        <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-xs text-emerald-300">
           Import complete: {importResult.created} added, {importResult.updated} updated, {importResult.skipped} kept.
         </p>
       )}
 
-      <div className="border-t border-slate-200 pt-2">
+      <div className="border-t border-white/5 pt-2">
         {!clearArmed ? (
           <button
             type="button"
             onClick={() => setClearArmed(true)}
-            className="text-xs font-medium text-red-600 hover:text-red-700 focus:outline-none focus-visible:underline">
+            className="text-xs font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
             Clear all records…
           </button>
         ) : (
-          <div className="flex flex-col gap-2 rounded bg-red-50 p-2 text-xs text-red-800">
+          <div className="flex flex-col gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-200">
             <p className="font-medium">This deletes every saved record on this device.</p>
             <button
               type="button"
               onClick={() => void handleExport()}
-              className="self-start rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+              className="self-start rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50">
               Download a backup first (recommended)
             </button>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => void handleClear()}
-                className="rounded bg-red-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+                className="rounded-lg bg-gradient-to-r from-rose-600 to-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow-md shadow-rose-500/25 transition hover:from-rose-500 hover:to-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
                 Yes, delete everything
               </button>
               <button
                 type="button"
                 onClick={() => setClearArmed(false)}
-                className="rounded border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
                 Cancel
               </button>
             </div>
@@ -187,8 +187,8 @@ export const DataManagement = () => {
         )}
       </div>
 
-      {message && <p className="text-xs text-slate-600">{message}</p>}
-      {error && <p className="text-xs text-red-700">{error}</p>}
+      {message && <p className="text-xs text-slate-400">{message}</p>}
+      {error && <p className="text-xs text-rose-300">{error}</p>}
     </section>
   );
 };

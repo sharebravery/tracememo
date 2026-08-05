@@ -10,7 +10,7 @@ export const buildExportEnvelope = (
   exportedAt = new Date().toISOString(),
 ): TraceMemoExport => ({
   format: 'tracememo',
-  version: 1,
+  version: 2,
   exportedAt,
   records,
 });

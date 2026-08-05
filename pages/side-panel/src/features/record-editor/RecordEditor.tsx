@@ -132,17 +132,17 @@ export const RecordEditor = ({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">{isEdit ? 'Edit record' : 'New record'}</h2>
+        <h2 className="text-sm font-semibold text-slate-200">{isEdit ? 'Edit record' : 'New record'}</h2>
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs font-medium text-slate-600 hover:text-slate-800 focus:outline-none focus-visible:underline">
+          className="text-xs font-medium text-slate-400 transition hover:text-slate-200 focus:outline-none focus-visible:underline">
           Back
         </button>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-address" className="text-xs font-medium text-slate-600">
+        <label htmlFor="tracememo-address" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
           Address
         </label>
         <input
@@ -154,15 +154,15 @@ export const RecordEditor = ({
           spellCheck={false}
           autoComplete="off"
           placeholder="0x…"
-          className="w-full rounded border border-slate-300 px-2 py-1.5 font-mono text-xs read-only:bg-slate-100 read-only:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 read-only:opacity-60 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
         {isEdit && (
-          <p className="text-[11px] text-slate-400">One global record per address; the address cannot change.</p>
+          <p className="text-[11px] text-slate-500">One global record per address; the address cannot change.</p>
         )}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-label" className="text-xs font-medium text-slate-600">
+        <label htmlFor="tracememo-label" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
           Label (shared across chains)
         </label>
         <input
@@ -172,15 +172,15 @@ export const RecordEditor = ({
           onChange={event => setLabel(event.target.value)}
           maxLength={LABEL_MAX}
           placeholder="Short label for this address"
-          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
-        <p className="text-[11px] text-slate-400">
+        <p className="text-[11px] text-slate-500">
           {label.length}/{LABEL_MAX}
         </p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-tags" className="text-xs font-medium text-slate-600">
+        <label htmlFor="tracememo-tags" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
           Tags (shared, comma-separated)
         </label>
         <input
@@ -189,13 +189,13 @@ export const RecordEditor = ({
           value={tagsText}
           onChange={event => setTagsText(event.target.value)}
           placeholder="wallet, exchange, suspicious"
-          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
-        <p className="text-[11px] text-slate-400">Up to {TAGS_MAX} tags; shared across chains.</p>
+        <p className="text-[11px] text-slate-500">Up to {TAGS_MAX} tags; shared across chains.</p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-note" className="text-xs font-medium text-slate-600">
+        <label htmlFor="tracememo-note" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
           Global note (shared across chains)
         </label>
         <textarea
@@ -205,37 +205,39 @@ export const RecordEditor = ({
           maxLength={NOTE_MAX}
           rows={2}
           placeholder="Notes that apply to this address on every chain"
-          className="w-full resize-y rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
       </div>
 
-      <div className="rounded border border-slate-200 bg-slate-50 p-2">
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5">
         <div className="flex flex-col gap-1">
-          <label htmlFor="tracememo-chain" className="text-xs font-medium text-slate-600">
+          <label htmlFor="tracememo-chain" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
             Chain context
           </label>
           <select
             id="tracememo-chain"
             value={chainId}
             onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
-            className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40">
             {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
-              <option key={id} value={id}>
+              <option key={id} value={id} className="bg-slate-900">
                 {CHAIN_LABELS[id]}
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500">
             Note, confidence, and sources are stored per chain and are not shared.
           </p>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-2.5">
           <ConfidenceSelect value={confidence} onChange={setConfidence} />
         </div>
 
-        <div className="mt-2 flex flex-col gap-1">
-          <label htmlFor="tracememo-chain-note" className="text-xs font-medium text-slate-600">
+        <div className="mt-2.5 flex flex-col gap-1">
+          <label
+            htmlFor="tracememo-chain-note"
+            className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
             Chain note
           </label>
           <textarea
@@ -245,30 +247,32 @@ export const RecordEditor = ({
             maxLength={NOTE_MAX}
             rows={3}
             placeholder={`Notes specific to ${CHAIN_LABELS[chainId]}`}
-            className="w-full resize-y rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
           />
         </div>
 
-        <div className="mt-2">
+        <div className="mt-2.5">
           <SourceList sources={sources} onChange={setSources} />
         </div>
       </div>
 
-      {error && <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-xs text-rose-300">{error}</p>
+      )}
 
       <div className="flex items-center justify-end gap-2 pt-1">
         <button
           type="button"
           onClick={onCancel}
           disabled={saving}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 disabled:opacity-50">
           Cancel
         </button>
         <button
           type="button"
           onClick={() => void handleSave()}
           disabled={saving}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50">
+          className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 disabled:opacity-50">
           {saving ? 'Saving…' : 'Save record'}
         </button>
       </div>

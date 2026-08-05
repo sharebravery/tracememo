@@ -127,7 +127,7 @@ describe('message sender authorization', () => {
     const res = await handleMessage(
       {
         type: 'DATA_IMPORT',
-        payload: { data: { format: 'tracememo', version: 1, exportedAt: '2026-01-01T00:00:00.000Z', records: [] } },
+        payload: { data: { format: 'tracememo', version: 2, exportedAt: '2026-01-01T00:00:00.000Z', records: [] } },
       },
       deps,
       contentSender(1, 'https://etherscan.io/x'),

@@ -37,7 +37,7 @@ const makeRecord = (overrides: Partial<AddressRecord> = {}): AddressRecord => ({
 
 const envelope = (records: AddressRecord[]): TraceMemoExport => ({
   format: 'tracememo',
-  version: 1,
+  version: 2,
   exportedAt: NOW,
   records,
 });

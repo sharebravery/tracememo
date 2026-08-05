@@ -180,9 +180,20 @@ describe('traceMemoExportSchema (all-or-nothing)', () => {
     expect(() =>
       traceMemoExportSchema.parse({
         format: 'tracememo',
-        version: 1,
+        version: 2,
         exportedAt: '2026-01-01T00:00:00.000Z',
         records: [validRecord, bad],
+      }),
+    ).toThrow();
+  });
+
+  it('rejects a version-1 (old per-chain model) export without partial parsing', () => {
+    expect(() =>
+      traceMemoExportSchema.parse({
+        format: 'tracememo',
+        version: 1,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        records: [],
       }),
     ).toThrow();
   });

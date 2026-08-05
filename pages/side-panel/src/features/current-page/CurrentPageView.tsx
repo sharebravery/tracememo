@@ -102,11 +102,11 @@ export const CurrentPageView = () => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-700">Current Page</h2>
+        <h2 className="text-sm font-semibold text-slate-200">Current Page</h2>
         <button
           type="button"
           onClick={() => void refresh()}
-          className="text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none focus-visible:underline">
+          className="text-xs font-medium text-violet-300 transition hover:text-violet-200 focus:outline-none focus-visible:underline">
           Refresh
         </button>
       </div>
@@ -117,7 +117,9 @@ export const CurrentPageView = () => {
         </p>
       )}
 
-      {error && <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-xs text-rose-300">{error}</p>
+      )}
 
       {detected === null && <p className="text-sm text-slate-500">Reading page…</p>}
 
@@ -128,30 +130,32 @@ export const CurrentPageView = () => {
       {hasAccounts && (
         <ul className="flex flex-col gap-2">
           {detected!.map(({ key, address, chainId, record }) => (
-            <li key={key} className="rounded border border-slate-200 bg-white p-3 shadow-sm">
+            <li
+              key={key}
+              className="rounded-xl border border-white/10 bg-white/[0.03] p-3 shadow-lg shadow-black/20 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.05]">
               <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+                <span className="shrink-0 rounded-full border border-cyan-500/30 bg-cyan-500/15 px-1.5 py-0.5 text-[10px] font-medium text-cyan-300">
                   {CHAIN_LABELS[chainId]}
                 </span>
                 {record && !record.chains.some(c => c.chainId === chainId) && (
-                  <span className="shrink-0 text-[10px] text-slate-400">no {CHAIN_LABELS[chainId]} context yet</span>
+                  <span className="shrink-0 text-[10px] text-slate-500">no {CHAIN_LABELS[chainId]} context yet</span>
                 )}
               </div>
-              <p className="mt-1 truncate font-mono text-xs text-slate-600" title={address}>
+              <p className="mt-1 truncate font-mono text-xs text-slate-400" title={address}>
                 {toChecksumAddress(address)}
               </p>
               {record ? (
                 <div className="mt-1 flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate text-sm font-medium text-slate-900">{record.label}</span>
-                    <span className="shrink-0 rounded bg-slate-200 px-1 py-0.5 text-[9px] font-medium text-slate-600">
+                    <span className="truncate text-sm font-semibold text-slate-100">{record.label}</span>
+                    <span className="shrink-0 rounded-full border border-violet-500/30 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-medium text-violet-300">
                       Private
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
-                    className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none focus-visible:underline">
+                    className="shrink-0 text-xs font-medium text-violet-300 transition hover:text-violet-200 focus:outline-none focus-visible:underline">
                     Edit
                   </button>
                 </div>
@@ -159,7 +163,7 @@ export const CurrentPageView = () => {
                 <button
                   type="button"
                   onClick={() => setEditing({ mode: 'create', address, chainId })}
-                  className="mt-1 rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                  className="mt-1 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
                   Save context
                 </button>
               )}

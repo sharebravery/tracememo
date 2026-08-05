@@ -17,7 +17,7 @@ export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirm
       <button
         type="button"
         onClick={() => setArmed(true)}
-        className="text-xs font-medium text-red-600 hover:text-red-700 focus:outline-none focus-visible:underline">
+        className="text-xs font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
         Delete
       </button>
     );
@@ -28,7 +28,7 @@ export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirm
       <button
         type="button"
         onClick={onConfirm}
-        className="rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
+        className="rounded-md bg-gradient-to-r from-rose-600 to-red-600 px-2 py-0.5 text-xs font-medium text-white shadow-md shadow-rose-500/25 transition hover:from-rose-500 hover:to-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
         Confirm delete
       </button>
       <button
@@ -37,7 +37,7 @@ export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirm
           setArmed(false);
           onCancel();
         }}
-        className="text-xs font-medium text-slate-600 hover:text-slate-800 focus:outline-none focus-visible:underline">
+        className="text-xs font-medium text-slate-400 transition hover:text-slate-200 focus:outline-none focus-visible:underline">
         Cancel
       </button>
     </span>

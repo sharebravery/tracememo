@@ -112,10 +112,10 @@ export interface Settings {
   onboardingSeen: boolean;
 }
 
-/** Versioned export envelope. */
+/** Versioned export envelope. Version 2 = global record + per-chain contexts. */
 export interface TraceMemoExport {
   format: 'tracememo';
-  version: 1;
+  version: 2;
   exportedAt: string;
   records: AddressRecord[];
 }

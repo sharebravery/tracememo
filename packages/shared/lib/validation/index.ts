@@ -1,3 +1,4 @@
+import { MAX_CHAIN_CONTEXTS, SUPPORTED_CHAIN_IDS, SUPPORTED_SITE_IDS } from '../domain/chains.js';
 import {
   ACCOUNT_KEYS_MAX,
   LABEL_MAX,
@@ -12,6 +13,7 @@ import {
 } from '../limits.js';
 import { isAddress } from 'viem';
 import { z } from 'zod';
+import type { SiteId, SupportedChainId } from '../domain/types.js';
 
 const httpUrlSchema = z
   .string()
@@ -59,7 +61,10 @@ const tagsSchema = z
  */
 export const confidenceSchema = z.enum(['confirmed', 'likely', 'unverified']);
 
-export const chainIdSchema = z.union([z.literal(1), z.literal(8453)]);
+export const chainIdSchema = z.custom<SupportedChainId>(
+  value => typeof value === 'number' && (SUPPORTED_CHAIN_IDS as readonly number[]).includes(value),
+  { message: 'Unsupported chain id' },
+);
 
 export const isoTimestampSchema = z.string().datetime({ offset: true, message: 'Expected an ISO 8601 timestamp' });
 
@@ -94,7 +99,7 @@ export const addressRecordSchema = z.object({
   label: z.string().min(1).max(LABEL_MAX),
   tags: tagsSchema,
   note: z.string().max(NOTE_MAX),
-  chains: z.array(chainContextSchema).max(2),
+  chains: z.array(chainContextSchema).max(MAX_CHAIN_CONTEXTS),
   createdAt: isoTimestampSchema,
   updatedAt: isoTimestampSchema,
 });
@@ -129,10 +134,12 @@ export const recordUpdateInputSchema = z.object({
   sources: sourcesInputArraySchema.default([]),
 });
 
-/** Strict export envelope; every record must be valid (all-or-nothing import). */
+/** Strict export envelope; every record must be valid (all-or-nothing import).
+ * Version 2 is the global-record + per-chain-context model. Version 1 (per-chain
+ * records) is rejected. */
 export const traceMemoExportSchema = z.object({
   format: z.literal('tracememo'),
-  version: z.literal(1),
+  version: z.literal(2),
   exportedAt: isoTimestampSchema,
   records: z.array(addressRecordSchema),
 });
@@ -149,7 +156,7 @@ export const settingsSchema = z.object({
 export const pageContextSchema = z.object({
   tabUrl: z.string().max(PAGE_URL_MAX),
   pageTitle: z.string().max(PAGE_TITLE_MAX),
-  site: z.enum(['etherscan', 'basescan']),
+  site: z.enum(SUPPORTED_SITE_IDS as [SiteId, ...SiteId[]]),
   chainId: chainIdSchema,
   addressKeys: z.array(addressKeySchema).max(ACCOUNT_KEYS_MAX),
   observedAt: isoTimestampSchema,

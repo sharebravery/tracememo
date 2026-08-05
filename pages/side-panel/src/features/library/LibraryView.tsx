@@ -89,12 +89,12 @@ export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewP
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-700">Library</h2>
+        <h2 className="text-sm font-semibold text-slate-200">Library</h2>
         <button
           type="button"
           onClick={() => setEditing({ mode: 'create' })}
-          className="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-          New Record
+          className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
+          + New Record
         </button>
       </div>
 
@@ -102,16 +102,18 @@ export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewP
         <div className="flex flex-col gap-2">
           <SearchInput value={query} onChange={setQuery} />
           <div className="flex flex-col gap-1">
-            <label htmlFor="tracememo-confidence-filter" className="text-xs font-medium text-slate-600">
+            <label
+              htmlFor="tracememo-confidence-filter"
+              className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
               Confidence
             </label>
             <select
               id="tracememo-confidence-filter"
               value={confidence}
               onChange={event => setConfidence(event.target.value as ConfidenceFilter)}
-              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40">
               {CONFIDENCE_FILTER_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
+                <option key={option.value} value={option.value} className="bg-slate-900">
                   {option.label}
                 </option>
               ))}
@@ -120,7 +122,9 @@ export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewP
         </div>
       )}
 
-      {error && <p className="rounded bg-red-50 px-2 py-1.5 text-xs text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-xs text-rose-300">{error}</p>
+      )}
 
       {records === null && <p className="text-sm text-slate-500">Loading records…</p>}
 
