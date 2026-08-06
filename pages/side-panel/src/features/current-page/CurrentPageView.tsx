@@ -52,6 +52,9 @@ export const CurrentPageView = () => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const refresh = async () => {
+    // Reset search and pagination on tab/context change.
+    setQuery('');
+    setVisibleCount(PAGE_SIZE);
     try {
       const tabId = await getActiveTabId();
       if (tabId == null) {
@@ -182,8 +185,12 @@ export const CurrentPageView = () => {
 
       {detected === null && <p className="text-sm text-slate-500">Reading page…</p>}
 
-      {!hasAccounts && detected !== null && !error && (
+      {!hasAccounts && detected !== null && !error && detected.length === 0 && (
         <EmptyState message="No supported EVM addresses detected on this page. Open an Etherscan or BaseScan page." />
+      )}
+
+      {!hasAccounts && detected !== null && !error && detected.length > 0 && (
+        <p className="py-4 text-center text-sm text-slate-500">No addresses match your search.</p>
       )}
 
       {hasAccounts && (

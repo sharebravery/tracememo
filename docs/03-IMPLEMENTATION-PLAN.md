@@ -5,7 +5,7 @@
 
 ## Global rule
 
-Records are one global entry per EVM address: the canonical key is `evm:<lowercase address>` and holds a shared label/tags/note plus independent per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label but NOT the chain-level note, confidence, or sources. Page context is isolated per Chrome tab.
+Records are one global entry per EVM address: the canonical key is `evm:<lowercase address>` and holds a shared label/tags/note plus independent per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label but NOT the chain-level note, confidence, or sources. Page context is isolated per Chrome tab. The side panel defaults to the Current Page view. The content script extracts a primary address from `/address/0x...` paths and sorts it first; `/tx/` hashes are never treated as addresses.
 
 The canonical command set (used by CI and every milestone's acceptance) is: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm build`, and `pnpm zip`. Do not introduce conflicting commands or version pins.
 

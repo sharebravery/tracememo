@@ -157,6 +157,7 @@ On Etherscan or BaseScan, the extension:
 
 - detects complete valid EVM addresses in relevant page content;
 - deduplicates them;
+- identifies the page's primary address from `/address/0x...` URL paths (never from `/tx/`);
 - ignores scripts, styles, inputs, editable fields, and extension-owned DOM;
 - sends only normalized addresses and current page metadata to the extension background context;
 - does not call an RPC or external API.

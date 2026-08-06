@@ -488,6 +488,7 @@ interface PageContextInput {
   site: 'etherscan' | 'basescan';
   chainId: SupportedChainId;
   addressKeys: AddressKey[];
+  primaryAddressKey?: AddressKey;
   observedAt: string;
 }
 
@@ -495,6 +496,8 @@ interface PageContext extends PageContextInput {
   tabId: number;
 }
 ```
+
+The content script extracts a `primaryAddressKey` from `/address/0x...` URL paths (never from `/tx/` transaction hashes) and includes it in the page context. The primary address is ensured to be in `addressKeys`, deduplicated, and sorted first.
 
 The background stores page context per tab in `chrome.storage.session` under `tracememo-page-context:<tabId>` and removes it when the tab closes (`chrome.tabs.onRemoved`). The side panel reads the active tab id via `chrome.tabs.query` (no `tabs` permission) and requests that tab's context, so state never bleeds across tabs. Research records remain in IndexedDB.
 

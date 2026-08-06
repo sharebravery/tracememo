@@ -12,6 +12,8 @@ TraceMemo is a local-first Chrome extension for Web3 researchers. Attach a priva
 - **Confidence-aware.** Mark a claim as `unverified`, `likely`, or `confirmed`. "Confirmed" is always shown as your own assessment, never as a platform verification.
 - **Inline private labels.** A small gradient badge appears beside matching addresses on supported explorer pages. The original address is never replaced or hidden.
 - **Per-tab isolation.** Current Page state is isolated per Chrome tab; switching tabs never bleeds context.
+- **Primary address.** On `/address/0x...` pages, the page's main address is identified and sorted first. Transaction hashes (`/tx/...`) are never mistaken for addresses.
+- **Search & pagination.** The Current Page view includes an address filter and paginates 20 at a time with Show more.
 - **Backup & restore.** Export all records to a versioned JSON file and re-import on another device. Import is all-or-nothing: one invalid record rejects the whole file.
 
 ## Privacy
@@ -30,6 +32,8 @@ See [`docs/privacy.md`](docs/privacy.md) for the full privacy notice and [`docs/
 - `https://basescan.org/*` (Base, chain id 8453)
 
 Chrome only (Manifest V3). Firefox is not supported.
+
+The toolbar icon opens the side panel directly (no popup). The side panel defaults to the Current Page view.
 
 ## Development
 
