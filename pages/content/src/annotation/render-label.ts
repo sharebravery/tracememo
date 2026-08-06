@@ -13,12 +13,11 @@ interface AnnotationContext {
 }
 
 const BADGE_STYLE =
-  'display:inline-flex;align-items:center;gap:3px;margin:0 2px 0 5px;padding:2px 7px;border-radius:9999px;' +
-  'background:linear-gradient(135deg,rgba(124,58,237,0.96),rgba(79,70,229,0.96));color:#ffffff;' +
-  'font-size:11px;font-weight:600;line-height:1.3;border:1px solid rgba(167,139,250,0.65);' +
-  'box-shadow:0 1px 8px rgba(124,58,237,0.35);vertical-align:middle;cursor:pointer;';
+  'display:inline-flex;align-items:center;gap:3px;margin:0 2px 0 5px;padding:1px 6px;border-radius:4px;' +
+  'background:rgba(15,23,42,0.92);color:#c4b5fd;font-size:11px;font-weight:500;line-height:1.3;' +
+  'border:1px solid rgba(139,92,246,0.35);vertical-align:middle;cursor:pointer;';
 
-const CUE_STYLE = 'font-weight:400;color:rgba(199,210,254,0.92);font-size:9px;';
+const CUE_STYLE = 'font-weight:400;color:#94a3b8;font-size:9px;';
 
 const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): HTMLElement => {
   const badge = document.createElement('span');

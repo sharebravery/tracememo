@@ -27,7 +27,7 @@ const getActiveTabId = async (): Promise<number | null> => {
 };
 
 const App = () => {
-  const [tab, setTab] = useState<TabId>('library');
+  const [tab, setTab] = useState<TabId>('current');
   const [focus, setFocus] = useState<FocusRequest | null>(null);
   const [ready, setReady] = useState<ReadyState>({ loading: true });
   const nonceRef = useRef(0);
@@ -101,18 +101,9 @@ const App = () => {
 
   return (
     <div className="flex h-full flex-col text-slate-100">
-      <header className="flex items-center justify-between px-4 pb-2 pt-3.5">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-indigo-500 text-[11px] font-bold text-white shadow-lg shadow-violet-500/30">
-            T
-          </span>
-          <h1 className="bg-gradient-to-r from-violet-300 via-indigo-200 to-cyan-200 bg-clip-text text-base font-semibold text-transparent">
-            TraceMemo
-          </h1>
-        </div>
-        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-          local-first
-        </span>
+      <header className="flex items-center gap-2 px-4 pb-2 pt-3">
+        <img src={chrome.runtime.getURL('icon-16.png')} alt="" className="h-4 w-4" />
+        <h1 className="text-sm font-semibold text-slate-200">TraceMemo</h1>
       </header>
 
       <div className="flex gap-1 px-3 pb-1" role="tablist" aria-label="TraceMemo views">
@@ -126,10 +117,8 @@ const App = () => {
               aria-selected={selected}
               onClick={() => setTab(tabDef.id)}
               className={
-                'flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 ' +
-                (selected
-                  ? 'bg-gradient-to-r from-violet-600/80 to-indigo-600/80 text-white shadow-md shadow-violet-500/20'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-slate-200')
+                'flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 ' +
+                (selected ? 'bg-violet-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200')
               }>
               {tabDef.label}
             </button>
@@ -137,7 +126,7 @@ const App = () => {
         })}
       </div>
 
-      <div className="mx-4 mb-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="mx-4 mb-1 h-px bg-slate-800" />
 
       <main className="flex-1 overflow-y-auto px-4 pb-4 pt-2">
         {tab === 'current' && <CurrentPageView />}

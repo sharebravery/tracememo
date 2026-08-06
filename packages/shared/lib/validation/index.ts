@@ -159,6 +159,7 @@ export const pageContextSchema = z.object({
   site: z.enum(SUPPORTED_SITE_IDS as [SiteId, ...SiteId[]]),
   chainId: chainIdSchema,
   addressKeys: z.array(addressKeySchema).max(ACCOUNT_KEYS_MAX),
+  primaryAddressKey: addressKeySchema.optional(),
   observedAt: isoTimestampSchema,
 });
 

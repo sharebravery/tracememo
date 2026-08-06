@@ -98,6 +98,9 @@ export interface PageContextInput {
   site: SiteId;
   chainId: SupportedChainId;
   addressKeys: AddressKey[];
+  /** The "main" address on the page (e.g. from /address/0x...). Extracted
+   * only from explicit explorer URL paths, never from tx hashes. Optional. */
+  primaryAddressKey?: AddressKey;
   observedAt: string;
 }
 

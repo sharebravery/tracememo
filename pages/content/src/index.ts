@@ -3,10 +3,10 @@ import { removeAnnotations } from './annotation/remove-labels.js';
 import { renderAnnotations } from './annotation/render-label.js';
 import { scanAddresses } from './detection/scan-addresses.js';
 import { sendMessage } from './messaging.js';
-import { toAddressKey } from '@extension/shared';
+import { isEvmAddress, toAddressKey } from '@extension/shared';
 import { DEFAULT_SETTINGS_STATE, SETTINGS_STORAGE_KEY } from '@extension/storage';
 import type { ExplorerSite } from './adapter/sites.js';
-import type { AddressKey, AddressRecord, PageContextInput, SupportedChainId } from '@extension/shared';
+import type { AddressKey, AddressRecord, EvmAddress, PageContextInput, SupportedChainId } from '@extension/shared';
 
 const DEBOUNCE_MS = 300;
 const MAX_ADAPTER_ERRORS = 5;
@@ -22,14 +22,34 @@ let adapterErrors = 0;
 let running = false;
 let annotationsEnabled = DEFAULT_SETTINGS_STATE.annotationsEnabled;
 
-const buildPageContext = (addressKeys: AddressKey[]): PageContextInput => ({
-  tabUrl: location.href.slice(0, 2048),
-  pageTitle: document.title.slice(0, 300),
-  site: (site as ExplorerSite).id,
-  chainId,
-  addressKeys,
-  observedAt: new Date().toISOString(),
-});
+/**
+ * Extract the "primary" address from the explorer URL path. Only
+ * `/address/0x...` is treated as a primary address; `/tx/0x...` (a transaction
+ * hash) is never mistaken for an address.
+ */
+const extractPrimaryAddress = (): EvmAddress | undefined => {
+  const segments = location.pathname.split('/').filter(Boolean);
+  if (segments.length >= 2 && segments[0] === 'address') {
+    const candidate = segments[1];
+    if (isEvmAddress(candidate)) {
+      return candidate as EvmAddress;
+    }
+  }
+  return undefined;
+};
+
+const buildPageContext = (addressKeys: AddressKey[]): PageContextInput => {
+  const primary = extractPrimaryAddress();
+  return {
+    tabUrl: location.href.slice(0, 2048),
+    pageTitle: document.title.slice(0, 300),
+    site: (site as ExplorerSite).id,
+    chainId,
+    addressKeys,
+    primaryAddressKey: primary ? toAddressKey(primary) : undefined,
+    observedAt: new Date().toISOString(),
+  };
+};
 
 const syncRecords = async (addressKeys: AddressKey[]): Promise<void> => {
   if (addressKeys.length === 0) {

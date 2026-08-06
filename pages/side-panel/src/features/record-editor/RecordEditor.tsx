@@ -179,97 +179,94 @@ export const RecordEditor = ({
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-label" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          Label (shared across chains)
-        </label>
-        <input
-          id="tracememo-label"
-          type="text"
-          value={label}
-          onChange={event => setLabel(event.target.value)}
-          maxLength={LABEL_MAX}
-          placeholder="Short label for this address"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-        />
-        <p className="text-[11px] text-slate-500">
-          {label.length}/{LABEL_MAX}
-        </p>
-      </div>
+      <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-2.5">
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">Shared across chains</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-label" className="text-[11px] font-medium text-slate-400">
+              Label
+            </label>
+            <input
+              id="tracememo-label"
+              type="text"
+              value={label}
+              onChange={event => setLabel(event.target.value)}
+              maxLength={LABEL_MAX}
+              placeholder="Short label for this address"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+            />
+            <p className="text-[10px] text-slate-600">
+              {label.length}/{LABEL_MAX}
+            </p>
+          </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-tags" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          Tags (shared, comma-separated)
-        </label>
-        <input
-          id="tracememo-tags"
-          type="text"
-          value={tagsText}
-          onChange={event => setTagsText(event.target.value)}
-          placeholder="wallet, exchange, suspicious"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-        />
-        <p className="text-[11px] text-slate-500">Up to {TAGS_MAX} tags; shared across chains.</p>
-      </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-tags" className="text-[11px] font-medium text-slate-400">
+              Tags (comma-separated)
+            </label>
+            <input
+              id="tracememo-tags"
+              type="text"
+              value={tagsText}
+              onChange={event => setTagsText(event.target.value)}
+              placeholder="wallet, exchange, suspicious"
+              className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+            />
+            <p className="text-[10px] text-slate-600">Up to {TAGS_MAX} tags.</p>
+          </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-note" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          Global note (shared across chains)
-        </label>
-        <textarea
-          id="tracememo-note"
-          value={note}
-          onChange={event => setNote(event.target.value)}
-          maxLength={NOTE_MAX}
-          rows={2}
-          placeholder="Notes that apply to this address on every chain"
-          className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-        />
-      </div>
-
-      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="tracememo-chain" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-            Chain context
-          </label>
-          <select
-            id="tracememo-chain"
-            value={chainId}
-            onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40">
-            {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
-              <option key={id} value={id} className="bg-slate-900">
-                {CHAIN_LABELS[id]}
-              </option>
-            ))}
-          </select>
-          <p className="text-[11px] text-slate-500">
-            Note, confidence, and sources are stored per chain and are not shared.
-          </p>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-note" className="text-[11px] font-medium text-slate-400">
+              Global note
+            </label>
+            <textarea
+              id="tracememo-note"
+              value={note}
+              onChange={event => setNote(event.target.value)}
+              maxLength={NOTE_MAX}
+              rows={2}
+              placeholder="Applies to this address on every chain"
+              className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+            />
+          </div>
         </div>
+      </div>
 
-        <div className="mt-2.5">
+      <div className="rounded-lg border border-slate-700 bg-slate-800/20 p-2.5">
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-cyan-500">Per-chain context</p>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1">
+            <select
+              id="tracememo-chain"
+              value={chainId}
+              onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30">
+              {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
+                <option key={id} value={id} className="bg-slate-900">
+                  {CHAIN_LABELS[id]}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-600">Note, confidence, and sources are per chain.</p>
+          </div>
+
           <ConfidenceSelect value={confidence} onChange={setConfidence} />
-        </div>
 
-        <div className="mt-2.5 flex flex-col gap-1">
-          <label
-            htmlFor="tracememo-chain-note"
-            className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-            Chain note
-          </label>
-          <textarea
-            id="tracememo-chain-note"
-            value={chainNote}
-            onChange={event => setChainNote(event.target.value)}
-            maxLength={NOTE_MAX}
-            rows={3}
-            placeholder={`Notes specific to ${CHAIN_LABELS[chainId]}`}
-            className="w-full resize-y rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-          />
-        </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-chain-note" className="text-[11px] font-medium text-slate-400">
+              Chain note
+            </label>
+            <textarea
+              id="tracememo-chain-note"
+              value={chainNote}
+              onChange={event => setChainNote(event.target.value)}
+              maxLength={NOTE_MAX}
+              rows={3}
+              placeholder={`Notes specific to ${CHAIN_LABELS[chainId]}`}
+              className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+            />
+          </div>
 
-        <div className="mt-2.5">
           <SourceList sources={sources} onChange={setSources} />
         </div>
       </div>

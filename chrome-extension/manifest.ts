@@ -8,15 +8,9 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
  *
  * Minimum-permission Manifest V3 surface:
  * - one background service worker;
- * - one side panel as the primary UI (no popup);
+ * - a side panel as the sole UI (toolbar click opens it directly);
  * - one content script scoped to the supported explorers only;
  * - `storage` and `sidePanel` permissions only.
- *
- * Forbidden in MVP: `<all_urls>`, `tabs`, `scripting`, `notifications`,
- * `cookies`, `history`, `webRequest`, `declarativeNetRequest`,
- * `clipboardRead`, new-tab override, popup, devtools page, and broad
- * `web_accessible_resources` matches. See docs/02-TECHNICAL-ARCHITECTURE.md
- * section 5.1.
  */
 const SUPPORTED_HOSTS = ['https://etherscan.io/*', 'https://basescan.org/*'] as const;
 
@@ -35,9 +29,17 @@ const manifest = {
   },
   action: {
     default_title: '__MSG_openSidePanel__',
-    default_icon: 'icon-34.png',
+    default_icon: {
+      '16': 'icon-16.png',
+      '32': 'icon-32.png',
+      '48': 'icon-48.png',
+      '128': 'icon-128.png',
+    },
   },
   icons: {
+    '16': 'icon-16.png',
+    '32': 'icon-32.png',
+    '48': 'icon-48.png',
     '128': 'icon-128.png',
   },
   content_scripts: [

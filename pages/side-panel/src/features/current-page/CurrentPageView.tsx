@@ -1,8 +1,8 @@
 import { sendMessage } from '../../messaging';
 import { EmptyState } from '../library/EmptyState';
 import { RecordEditor } from '../record-editor/RecordEditor';
-import { addressKeyToAddress, CHAIN_LABELS, PAGE_CONTEXT_KEY_PREFIX, toChecksumAddress } from '@extension/shared';
-import { useEffect, useState } from 'react';
+import { addressKeyToAddress, CHAIN_LABELS, toChecksumAddress } from '@extension/shared';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   AddressKey,
   AddressRecord,
@@ -17,7 +17,10 @@ interface DetectedAccount {
   address: EvmAddress;
   chainId: SupportedChainId;
   record?: AddressRecord;
+  isPrimary: boolean;
 }
+
+const PAGE_SIZE = 20;
 
 const getActiveTabId = async (): Promise<number | null> => {
   try {
@@ -26,6 +29,12 @@ const getActiveTabId = async (): Promise<number | null> => {
   } catch {
     return null;
   }
+};
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  confirmed: 'Confirmed',
+  likely: 'Likely',
+  unverified: 'Unverified',
 };
 
 export const CurrentPageView = () => {
@@ -39,6 +48,8 @@ export const CurrentPageView = () => {
     record?: AddressRecord;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const refresh = async () => {
     try {
@@ -54,14 +65,22 @@ export const CurrentPageView = () => {
       if (pageCtx && pageCtx.addressKeys.length > 0) {
         const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: pageCtx.addressKeys } });
         const byKey = new Map<AddressKey, AddressRecord>(records.map(r => [r.key, r]));
-        setDetected(
-          pageCtx.addressKeys.map(key => ({
-            key,
-            address: addressKeyToAddress(key),
-            chainId: pageCtx.chainId,
-            record: byKey.get(key),
-          })),
-        );
+        const accounts: DetectedAccount[] = pageCtx.addressKeys.map(key => ({
+          key,
+          address: addressKeyToAddress(key),
+          chainId: pageCtx.chainId,
+          record: byKey.get(key),
+          isPrimary: key === pageCtx.primaryAddressKey,
+        }));
+        // Sort: primary first, then saved, then unsaved.
+        accounts.sort((a, b) => {
+          if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+          const aSaved = a.record ? 0 : 1;
+          const bSaved = b.record ? 0 : 1;
+          if (aSaved !== bSaved) return aSaved - bSaved;
+          return 0;
+        });
+        setDetected(accounts);
       } else {
         setDetected([]);
       }
@@ -75,10 +94,8 @@ export const CurrentPageView = () => {
   useEffect(() => {
     void refresh();
     const onActivated = () => void refresh();
-    // Auto-refresh when the active tab's page context changes (navigation,
-    // dynamic content, detection rescan) so the user never needs Refresh.
     const onSessionChanged = (changes: { [key: string]: chrome.storage.StorageChange }) => {
-      if (Object.keys(changes).some(key => key.startsWith(PAGE_CONTEXT_KEY_PREFIX))) {
+      if (Object.keys(changes).some(key => key.startsWith('tracememo-page-context:'))) {
         void refresh();
       }
     };
@@ -89,6 +106,24 @@ export const CurrentPageView = () => {
       chrome.storage.session.onChanged.removeListener(onSessionChanged);
     };
   }, []);
+
+  // Reset pagination when query changes.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query]);
+
+  const filtered = useMemo(() => {
+    if (!detected) return null;
+    const q = query.trim().toLowerCase();
+    if (!q) return detected;
+    return detected.filter(
+      d => d.address.toLowerCase().includes(q) || (d.record?.label.toLowerCase().includes(q) ?? false),
+    );
+  }, [detected, query]);
+
+  const visible = filtered ? filtered.slice(0, visibleCount) : null;
+  const hasMore = filtered ? filtered.length > visibleCount : false;
+  const savedCount = detected?.filter(d => d.record).length ?? 0;
 
   if (editing) {
     const pageSource: SourceInput | undefined = ctx ? { url: ctx.tabUrl, title: ctx.pageTitle } : undefined;
@@ -108,24 +143,37 @@ export const CurrentPageView = () => {
     );
   }
 
-  const hasAccounts = detected !== null && detected.length > 0;
+  const hasAccounts = visible !== null && visible.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-200">Current Page</h2>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="text-xs font-medium text-violet-300 transition hover:text-violet-200 focus:outline-none focus-visible:underline">
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-200">Current Page</h2>
+          {ctx && (
+            <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-cyan-400">
+              {CHAIN_LABELS[ctx.chainId]}
+            </span>
+          )}
+        </div>
       </div>
 
       {ctx && (
-        <p className="truncate text-xs text-slate-500" title={ctx.tabUrl}>
-          {ctx.pageTitle || ctx.tabUrl}
-        </p>
+        <div className="text-xs text-slate-500">
+          {detected && detected.length > 0
+            ? `${detected.length} address${detected.length === 1 ? '' : 'es'} · ${savedCount} saved`
+            : 'No addresses detected'}
+        </div>
+      )}
+
+      {ctx && detected && detected.length > 4 && (
+        <input
+          type="search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Filter addresses…"
+          className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+        />
       )}
 
       {error && (
@@ -135,52 +183,66 @@ export const CurrentPageView = () => {
       {detected === null && <p className="text-sm text-slate-500">Reading page…</p>}
 
       {!hasAccounts && detected !== null && !error && (
-        <EmptyState message="No supported EVM addresses detected on this page. Open an Etherscan or BaseScan page, then refresh." />
+        <EmptyState message="No supported EVM addresses detected on this page. Open an Etherscan or BaseScan page." />
       )}
 
       {hasAccounts && (
-        <ul className="flex flex-col gap-2">
-          {detected!.map(({ key, address, chainId, record }) => (
-            <li
-              key={key}
-              className="rounded-xl border border-white/10 bg-white/[0.03] p-3 shadow-lg shadow-black/20 backdrop-blur-sm transition hover:border-white/20 hover:bg-white/[0.05]">
-              <div className="flex items-center gap-2">
-                <span className="shrink-0 rounded-full border border-cyan-500/30 bg-cyan-500/15 px-1.5 py-0.5 text-[10px] font-medium text-cyan-300">
-                  {CHAIN_LABELS[chainId]}
-                </span>
-                {record && !record.chains.some(c => c.chainId === chainId) && (
-                  <span className="shrink-0 text-[10px] text-slate-500">no {CHAIN_LABELS[chainId]} context yet</span>
-                )}
-              </div>
-              <p className="mt-1 truncate font-mono text-xs text-slate-400" title={address}>
-                {toChecksumAddress(address)}
-              </p>
-              {record ? (
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="truncate text-sm font-semibold text-slate-100">{record.label}</span>
-                    <span className="shrink-0 rounded-full border border-violet-500/30 bg-violet-500/15 px-1.5 py-0.5 text-[9px] font-medium text-violet-300">
-                      Private
-                    </span>
+        <ul className="flex flex-col gap-1.5">
+          {visible!.map(({ key, address, chainId, record, isPrimary }) => {
+            const chainCtx = record?.chains.find(c => c.chainId === chainId);
+            return (
+              <li
+                key={key}
+                className={`rounded-lg border p-2.5 ${isPrimary ? 'border-violet-500/30 bg-violet-500/5' : 'border-slate-800 bg-slate-900/40'}`}>
+                <div className="flex items-center gap-1.5">
+                  {isPrimary && <span className="shrink-0 text-[10px] font-medium text-violet-400">★</span>}
+                  <span className="truncate font-mono text-xs text-slate-400" title={address}>
+                    {toChecksumAddress(address)}
+                  </span>
+                </div>
+                {record ? (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-medium text-slate-100">{record.label}</span>
+                      <span className="shrink-0 rounded bg-slate-700 px-1 py-0.5 text-[9px] font-medium text-slate-300">
+                        Private
+                      </span>
+                      {chainCtx ? (
+                        <span className="shrink-0 text-[10px] text-slate-500">
+                          {CONFIDENCE_LABEL[chainCtx.confidence]}
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] text-slate-600">no {CHAIN_LABELS[chainId]} context</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
+                      className="shrink-0 text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
+                      Edit
+                    </button>
                   </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
-                    className="shrink-0 text-xs font-medium text-violet-300 transition hover:text-violet-200 focus:outline-none focus-visible:underline">
-                    Edit
+                    onClick={() => setEditing({ mode: 'create', address, chainId })}
+                    className="mt-1 rounded-lg bg-violet-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+                    Save
                   </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setEditing({ mode: 'create', address, chainId })}
-                  className="mt-1 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
-                  Save context
-                </button>
-              )}
-            </li>
-          ))}
+                )}
+              </li>
+            );
+          })}
         </ul>
+      )}
+
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+          className="self-center text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
+          Show more ({filtered!.length - visibleCount} remaining)
+        </button>
       )}
     </div>
   );
