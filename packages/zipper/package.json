@@ -20,7 +20,8 @@
     "ready": "tsc -b",
     "lint:fix": "pnpm lint --fix",
     "format": "prettier . --write --ignore-path ../../.prettierignore",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "pnpm ready"
   },
   "devDependencies": {
     "@extension/tsconfig": "workspace:*",
