@@ -1,7 +1,7 @@
 import { handleMessage } from './message-router.js';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { RecordsRepository } from '@extension/research-db';
-import type { AddressKey, PageContextInput, ResponseMessage } from '@extension/shared';
+import type { AddressKey, AddressRecord, PageContextInput, ResponseMessage, SupportedChainId } from '@extension/shared';
 import type { SettingsStorageType } from '@extension/storage';
 
 /** In-memory chrome.storage.session mock. */
@@ -164,5 +164,74 @@ describe('message sender authorization', () => {
       tab: { id: 1, url: 'https://etherscan.io/x' },
     } as chrome.runtime.MessageSender);
     expect(res.ok).toBe(false);
+  });
+});
+
+describe('OPEN_RECORD pending per tab', () => {
+  beforeEach(() => {
+    sessionStore.clear();
+  });
+
+  it('stores pending under a per-tab key and isolates concurrent tabs', async () => {
+    const KEY = ('evm:0x' + 'a'.repeat(40)) as AddressKey;
+    await handleMessage(
+      { type: 'OPEN_RECORD', payload: { key: KEY, chainId: 1 as SupportedChainId } },
+      deps,
+      contentSender(1, 'https://etherscan.io/x'),
+    );
+    await handleMessage(
+      { type: 'OPEN_RECORD', payload: { key: KEY, chainId: 8453 as SupportedChainId } },
+      deps,
+      contentSender(2, 'https://basescan.org/x'),
+    );
+    expect(sessionStore.get('tracememo-pending-record:1')).toMatchObject({ key: KEY, chainId: 1 });
+    expect(sessionStore.get('tracememo-pending-record:2')).toMatchObject({ key: KEY, chainId: 8453 });
+  });
+});
+
+describe('RECORD_CREATE does not overwrite', () => {
+  const KEY = ('evm:0x' + 'a'.repeat(40)) as AddressKey;
+  const ADDR = '0x' + 'Aa'.repeat(20);
+  const validCreate = {
+    address: ADDR,
+    chainId: 1,
+    label: 'L',
+    tags: [],
+    note: '',
+    chainNote: '',
+    confidence: 'unverified' as const,
+    sources: [],
+  };
+
+  it('returns ALREADY_EXISTS when the address already has a record', async () => {
+    const existing = { key: KEY } as AddressRecord;
+    const mockRepo = {
+      get: async () => existing,
+      create: async () => {
+        throw new Error('KeyAlreadyExists');
+      },
+    } as unknown as RecordsRepository;
+    const res = await handleMessage(
+      { type: 'RECORD_CREATE', payload: validCreate },
+      { repo: mockRepo, settings: {} as SettingsStorageType },
+      sidePanelSender(),
+    );
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe('ALREADY_EXISTS');
+    }
+  });
+
+  it('creates when no existing record', async () => {
+    const mockRepo = {
+      get: async () => undefined,
+      create: async (record: AddressRecord) => record,
+    } as unknown as RecordsRepository;
+    const res = await handleMessage(
+      { type: 'RECORD_CREATE', payload: validCreate },
+      { repo: mockRepo, settings: {} as SettingsStorageType },
+      sidePanelSender(),
+    );
+    expect(res.ok).toBe(true);
   });
 });

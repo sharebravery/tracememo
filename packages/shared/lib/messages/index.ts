@@ -68,6 +68,7 @@ export const ErrorCode = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
   IMPORT_TOO_LARGE: 'IMPORT_TOO_LARGE',
   FORBIDDEN: 'FORBIDDEN',
+  ALREADY_EXISTS: 'ALREADY_EXISTS',
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

@@ -18,12 +18,16 @@ const CONFIDENCE_FILTER_OPTIONS: { value: ConfidenceFilter; label: string }[] = 
 ];
 
 interface LibraryViewProps {
-  /** When set, open this record on mount (from an annotation click). */
+  /** When set, open this record (from an annotation click). */
   initialEditKey?: AddressKey;
   initialEditChainId?: SupportedChainId;
+  /** Incremented on each annotation click; the focus effect re-runs on change
+   * so the editor opens even when the side panel is already mounted, and even
+   * when the same record is clicked again. */
+  focusNonce?: number;
 }
 
-export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewProps = {}) => {
+export const LibraryView = ({ initialEditKey, initialEditChainId, focusNonce }: LibraryViewProps = {}) => {
   const [records, setRecords] = useState<AddressRecord[] | null>(null);
   const [query, setQuery] = useState('');
   const [confidence, setConfidence] = useState<ConfidenceFilter>('all');
@@ -40,23 +44,33 @@ export const LibraryView = ({ initialEditKey, initialEditChainId }: LibraryViewP
     }
   };
 
+  // Load the list once on mount.
   useEffect(() => {
-    const init = async () => {
-      await refresh();
-      if (initialEditKey) {
-        try {
-          const record = await sendMessage({ type: 'RECORD_GET', payload: { key: initialEditKey } });
-          if (record) {
-            setEditing({ mode: 'update', record, chainId: initialEditChainId ?? record.chains[0]?.chainId ?? 1 });
-          }
-        } catch {
-          // Pending record no longer exists; ignore.
+    void refresh();
+  }, []);
+
+  // Respond to a new annotation-click focus (initial mount AND live while open).
+  useEffect(() => {
+    if (!initialEditKey) {
+      return;
+    }
+    let cancelled = false;
+    const open = async () => {
+      try {
+        const record = await sendMessage({ type: 'RECORD_GET', payload: { key: initialEditKey } });
+        if (!cancelled && record) {
+          setEditing({ mode: 'update', record, chainId: initialEditChainId ?? record.chains[0]?.chainId ?? 1 });
         }
+      } catch {
+        // Pending record no longer exists; ignore.
       }
     };
-    void init();
+    void open();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [focusNonce]);
 
   const handleDelete = async (record: AddressRecord) => {
     try {

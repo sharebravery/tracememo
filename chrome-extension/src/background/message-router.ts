@@ -4,7 +4,7 @@ import {
   toAddressKey,
   toChecksumAddress,
   pageContextStorageKey,
-  PENDING_RECORD_STORAGE_KEY,
+  pendingRecordStorageKey,
 } from '@extension/shared';
 import type { RecordsRepository } from '@extension/research-db';
 import type {
@@ -113,7 +113,23 @@ const createRecord = async (input: RecordCreateInput, repo: RecordsRepository): 
     createdAt: now,
     updatedAt: now,
   };
-  return repo.upsert(record);
+  // Fast path: surface a clear error before the atomic add.
+  const existing = await repo.get(record.key);
+  if (existing) {
+    throw new RouterError(ErrorCode.ALREADY_EXISTS, 'A record for this address already exists');
+  }
+  try {
+    // `add` is atomic and rejects on an existing key - never overwrites.
+    return await repo.create(record);
+  } catch {
+    // Race: another create won between the get and the add. Re-check so we
+    // never report a generic error for a duplicate.
+    const again = await repo.get(record.key);
+    if (again) {
+      throw new RouterError(ErrorCode.ALREADY_EXISTS, 'A record for this address already exists');
+    }
+    throw new RouterError(ErrorCode.INTERNAL_ERROR, 'Failed to create record');
+  }
 };
 
 const updateRecord = async (input: RecordUpdateInput, repo: RecordsRepository): Promise<AddressRecord> => {
@@ -239,11 +255,18 @@ export const handleMessage = async (
       case 'PAGE_CONTEXT_GET':
         return { ok: true, data: await getPageContext(message.payload.tabId) };
 
-      case 'OPEN_RECORD':
+      case 'OPEN_RECORD': {
+        // Pending record is isolated per tab so concurrent tabs never collide.
+        const tabId = sender.tab?.id;
+        if (tabId == null) {
+          logFailure('OPEN_RECORD', ErrorCode.FORBIDDEN);
+          return { ok: false, error: { code: ErrorCode.FORBIDDEN, message: 'No tab context' } };
+        }
         await chrome.storage.session.set({
-          [PENDING_RECORD_STORAGE_KEY]: { key: message.payload.key, chainId: message.payload.chainId },
+          [pendingRecordStorageKey(tabId)]: { key: message.payload.key, chainId: message.payload.chainId },
         });
         return { ok: true, data: { acknowledged: true as const } };
+      }
 
       default: {
         const exhaustive: never = message;

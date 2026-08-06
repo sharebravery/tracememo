@@ -40,8 +40,15 @@ const syncRecords = async (addressKeys: AddressKey[]): Promise<void> => {
   recordMap = new Map(records.map(record => [record.key, record]));
 };
 
+/**
+ * Render annotation badges. Only the badge display is gated by
+ * `annotationsEnabled`; detection (scan + PAGE_CONTEXT_SET + record sync) runs
+ * regardless, so the Current Page view still sees addresses when labels are off.
+ */
 const render = (): void => {
-  if (!observer || !annotationsEnabled) return;
+  if (!observer || !annotationsEnabled) {
+    return;
+  }
   observer.disconnect();
   try {
     renderAnnotations(document.body, {
@@ -67,7 +74,9 @@ const render = (): void => {
 };
 
 const rescan = async (): Promise<void> => {
-  if (running || !annotationsEnabled) return;
+  if (running) {
+    return;
+  }
   running = true;
   try {
     const addresses = scanAddresses(document.body);
@@ -84,7 +93,6 @@ const rescan = async (): Promise<void> => {
 };
 
 const scheduleRescan = (): void => {
-  if (!annotationsEnabled) return;
   if (rescanTimer) {
     clearTimeout(rescanTimer);
   }
@@ -94,16 +102,18 @@ const scheduleRescan = (): void => {
 };
 
 const setAnnotationsEnabled = (enabled: boolean): void => {
-  if (enabled === annotationsEnabled) return;
+  if (enabled === annotationsEnabled) {
+    return;
+  }
   annotationsEnabled = enabled;
   if (!enabled) {
-    if (rescanTimer) clearTimeout(rescanTimer);
-    observer?.disconnect();
+    // Hide labels but keep detecting (observer stays connected, rescan keeps
+    // running) so the Current Page view still reports addresses.
     removeAnnotations(document.body);
     return;
   }
-  observer?.observe(document.body, OBSERVER_OPTIONS);
-  void rescan();
+  // Re-enabled: render badges for the current recordMap.
+  render();
 };
 
 const refreshAnnotationsEnabled = async (): Promise<void> => {
@@ -116,38 +126,42 @@ const refreshAnnotationsEnabled = async (): Promise<void> => {
 };
 
 const onStorageChanged = (changes: { [key: string]: chrome.storage.StorageChange }, area: string): void => {
-  if (area !== 'local' || !changes[SETTINGS_STORAGE_KEY]) return;
+  if (area !== 'local' || !changes[SETTINGS_STORAGE_KEY]) {
+    return;
+  }
   const next = changes[SETTINGS_STORAGE_KEY].newValue;
   setAnnotationsEnabled(next?.annotationsEnabled ?? DEFAULT_SETTINGS_STATE.annotationsEnabled);
 };
 
 /**
- * Entry point. Detects the site (and chain id), scans once, renders
- * annotations, and starts a debounced MutationObserver for dynamic content.
- * Annotations honor the `annotationsEnabled` setting and are removed
- * immediately when disabled. Fails safely: repeated adapter errors halt the
- * observer without breaking page controls.
+ * Entry point. Detects the site (and chain id), scans once, and starts a
+ * debounced MutationObserver for dynamic content. Detection always runs; badge
+ * rendering is gated by `annotationsEnabled`. Fails safely: repeated adapter
+ * errors halt the observer without breaking page controls.
  */
 export const startContentScript = (): void => {
   site = detectSite(location.hostname);
-  if (!site) return;
+  if (!site) {
+    return;
+  }
   chainId = site.chainId;
 
   document.documentElement.setAttribute(DATA_ATTR, 'host');
 
   observer = new MutationObserver(() => scheduleRescan());
+  observer.observe(document.body, OBSERVER_OPTIONS);
   chrome.storage.onChanged.addListener(onStorageChanged);
 
   void (async () => {
     await refreshAnnotationsEnabled();
-    if (annotationsEnabled) {
-      void rescan();
-    }
+    void rescan();
   })();
 
   window.addEventListener('beforeunload', () => {
     observer?.disconnect();
     chrome.storage.onChanged.removeListener(onStorageChanged);
-    if (rescanTimer) clearTimeout(rescanTimer);
+    if (rescanTimer) {
+      clearTimeout(rescanTimer);
+    }
   });
 };

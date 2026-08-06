@@ -99,6 +99,13 @@ describe('records repository', () => {
       expect(await repo.getMany([KEY_A, k('9'.repeat(40))])).toHaveLength(1);
     });
 
+    it('create rejects a duplicate key and keeps the original', async () => {
+      const repo = createRecordsRepository(db);
+      await repo.create(makeRecord({ label: 'First' }));
+      await expect(repo.create(makeRecord({ label: 'Second' }))).rejects.toThrow();
+      expect((await repo.get(KEY_A))?.label).toBe('First');
+    });
+
     it('removes and clears', async () => {
       const repo = createRecordsRepository(db);
       await repo.upsert(makeRecord());
@@ -179,6 +186,43 @@ describe('records repository', () => {
       const valid = makeRecord({ key: k('1'.repeat(40)), address: a('1'.repeat(40)) });
       const invalid = { ...valid, key: 'eip155:1:0x' + 'a'.repeat(40) } as unknown as AddressRecord;
       await expect(repo.importAll(envelope([valid, invalid]))).rejects.toBeInstanceOf(ImportError);
+      expect(await repo.list()).toHaveLength(0);
+    });
+
+    it('rejects when a record key does not match its address', async () => {
+      const repo = createRecordsRepository(db);
+      const mismatched = { ...makeRecord(), key: k('b'.repeat(40)) } as AddressRecord;
+      await expect(repo.importAll(envelope([mismatched]))).rejects.toBeInstanceOf(ImportError);
+      expect(await repo.list()).toHaveLength(0);
+    });
+
+    it('rejects when a record has duplicate chainIds', async () => {
+      const repo = createRecordsRepository(db);
+      const dup = makeRecord({
+        chains: [chain(1), chain(1, { note: 'dup' })],
+      });
+      await expect(repo.importAll(envelope([dup]))).rejects.toBeInstanceOf(ImportError);
+    });
+
+    it('rejects when a chain context has duplicate source ids', async () => {
+      const repo = createRecordsRepository(db);
+      const dup = makeRecord({
+        chains: [
+          chain(1, {
+            sources: [
+              { id: 's1', url: 'https://a.com', title: 'A', createdAt: NOW },
+              { id: 's1', url: 'https://b.com', title: 'B', createdAt: NOW },
+            ],
+          }),
+        ],
+      });
+      await expect(repo.importAll(envelope([dup]))).rejects.toBeInstanceOf(ImportError);
+    });
+
+    it('rejects when the file has duplicate record keys', async () => {
+      const repo = createRecordsRepository(db);
+      const rec = makeRecord();
+      await expect(repo.importAll(envelope([rec, rec]))).rejects.toBeInstanceOf(ImportError);
       expect(await repo.list()).toHaveLength(0);
     });
   });

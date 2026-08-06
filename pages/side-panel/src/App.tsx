@@ -4,18 +4,44 @@ import { Onboarding } from './features/onboarding/Onboarding';
 import { SettingsView } from './features/settings/SettingsView';
 import { sendMessage } from './messaging';
 import { TABS } from './routes';
-import { PENDING_RECORD_STORAGE_KEY } from '@extension/shared';
-import { useEffect, useState } from 'react';
+import { PENDING_RECORD_KEY_PREFIX, pendingRecordStorageKey } from '@extension/shared';
+import { useEffect, useRef, useState } from 'react';
 import type { TabId } from './routes';
 import type { AddressKey, SupportedChainId } from '@extension/shared';
 
 type ReadyState = { onboarding: boolean } | { loading: true };
 
+interface FocusRequest {
+  key: AddressKey;
+  chainId: SupportedChainId;
+  nonce: number;
+}
+
+const getActiveTabId = async (): Promise<number | null> => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tab?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
 const App = () => {
   const [tab, setTab] = useState<TabId>('library');
-  const [pendingKey, setPendingKey] = useState<AddressKey | undefined>(undefined);
-  const [pendingChainId, setPendingChainId] = useState<SupportedChainId | undefined>(undefined);
+  const [focus, setFocus] = useState<FocusRequest | null>(null);
   const [ready, setReady] = useState<ReadyState>({ loading: true });
+  const nonceRef = useRef(0);
+
+  const consumePending = async (tabId: number): Promise<void> => {
+    const data = await chrome.storage.session.get(pendingRecordStorageKey(tabId));
+    const pending = data[pendingRecordStorageKey(tabId)] as { key: AddressKey; chainId: SupportedChainId } | undefined;
+    if (pending) {
+      nonceRef.current += 1;
+      setFocus({ key: pending.key, chainId: pending.chainId, nonce: nonceRef.current });
+      setTab('library');
+      void chrome.storage.session.remove(pendingRecordStorageKey(tabId));
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -23,22 +49,42 @@ const App = () => {
         const settings = await sendMessage({ type: 'SETTINGS_GET' });
         setReady({ onboarding: !settings.onboardingSeen });
       } catch {
-        // If settings cannot be read, skip onboarding rather than blocking the UI.
         setReady({ onboarding: false });
       }
-
-      // If the side panel was opened from an annotation click, focus that record
-      // on the chain the click came from.
-      const data = await chrome.storage.session.get(PENDING_RECORD_STORAGE_KEY);
-      const pending = data[PENDING_RECORD_STORAGE_KEY] as { key: AddressKey; chainId: SupportedChainId } | undefined;
-      if (pending) {
-        setPendingKey(pending.key);
-        setPendingChainId(pending.chainId);
-        setTab('library');
-        void chrome.storage.session.remove(PENDING_RECORD_STORAGE_KEY);
+      const tabId = await getActiveTabId();
+      if (tabId != null) {
+        await consumePending(tabId);
       }
     };
     void init();
+
+    // Live: when an annotation is clicked while the side panel is already open,
+    // consume the pending record for the active tab immediately.
+    const onSessionChanged = async (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      const pendingKey = Object.keys(changes).find(key => key.startsWith(PENDING_RECORD_KEY_PREFIX));
+      if (!pendingKey || !changes[pendingKey].newValue) {
+        return;
+      }
+      const tabId = await getActiveTabId();
+      if (tabId != null) {
+        await consumePending(tabId);
+      }
+    };
+
+    // When the user switches the active tab, consume that tab's pending record.
+    const onTabActivated = async () => {
+      const tabId = await getActiveTabId();
+      if (tabId != null) {
+        await consumePending(tabId);
+      }
+    };
+
+    chrome.storage.session.onChanged.addListener(onSessionChanged);
+    chrome.tabs.onActivated.addListener(onTabActivated);
+    return () => {
+      chrome.storage.session.onChanged.removeListener(onSessionChanged);
+      chrome.tabs.onActivated.removeListener(onTabActivated);
+    };
   }, []);
 
   if ('loading' in ready) {
@@ -95,7 +141,9 @@ const App = () => {
 
       <main className="flex-1 overflow-y-auto px-4 pb-4 pt-2">
         {tab === 'current' && <CurrentPageView />}
-        {tab === 'library' && <LibraryView initialEditKey={pendingKey} initialEditChainId={pendingChainId} />}
+        {tab === 'library' && (
+          <LibraryView initialEditKey={focus?.key} initialEditChainId={focus?.chainId} focusNonce={focus?.nonce} />
+        )}
         {tab === 'settings' && <SettingsView />}
       </main>
     </div>

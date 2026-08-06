@@ -1,7 +1,7 @@
 import { sendMessage } from '../../messaging';
 import { EmptyState } from '../library/EmptyState';
 import { RecordEditor } from '../record-editor/RecordEditor';
-import { addressKeyToAddress, CHAIN_LABELS, toChecksumAddress } from '@extension/shared';
+import { addressKeyToAddress, CHAIN_LABELS, PAGE_CONTEXT_KEY_PREFIX, toChecksumAddress } from '@extension/shared';
 import { useEffect, useState } from 'react';
 import type {
   AddressKey,
@@ -74,9 +74,20 @@ export const CurrentPageView = () => {
 
   useEffect(() => {
     void refresh();
-    const listener = () => void refresh();
-    chrome.tabs.onActivated.addListener(listener);
-    return () => chrome.tabs.onActivated.removeListener(listener);
+    const onActivated = () => void refresh();
+    // Auto-refresh when the active tab's page context changes (navigation,
+    // dynamic content, detection rescan) so the user never needs Refresh.
+    const onSessionChanged = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      if (Object.keys(changes).some(key => key.startsWith(PAGE_CONTEXT_KEY_PREFIX))) {
+        void refresh();
+      }
+    };
+    chrome.tabs.onActivated.addListener(onActivated);
+    chrome.storage.session.onChanged.addListener(onSessionChanged);
+    return () => {
+      chrome.tabs.onActivated.removeListener(onActivated);
+      chrome.storage.session.onChanged.removeListener(onSessionChanged);
+    };
   }, []);
 
   if (editing) {

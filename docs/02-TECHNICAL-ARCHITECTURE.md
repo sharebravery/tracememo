@@ -487,7 +487,7 @@ interface PageContextInput {
   pageTitle: string;
   site: 'etherscan' | 'basescan';
   chainId: SupportedChainId;
-  accountKeys: AccountKey[];
+  addressKeys: AddressKey[];
   observedAt: string;
 }
 

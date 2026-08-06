@@ -13,6 +13,9 @@ export interface RecordsRepository {
   list(): Promise<AddressRecord[]>;
   get(key: AddressKey): Promise<AddressRecord | undefined>;
   getMany(keys: AddressKey[]): Promise<AddressRecord[]>;
+  /** Atomically create a new record. Rejects (KeyAlreadyExists) if the key
+   * already exists - never overwrites. Use `upsert` for updates. */
+  create(record: AddressRecord): Promise<AddressRecord>;
   upsert(record: AddressRecord): Promise<AddressRecord>;
   remove(key: AddressKey): Promise<void>;
   clear(): Promise<void>;
@@ -29,6 +32,12 @@ export const createRecordsRepository = (db: TraceMemoDatabase): RecordsRepositor
   getMany: async keys => {
     const rows = await db.records.bulkGet(keys);
     return rows.filter((row): row is AddressRecord => row !== undefined);
+  },
+
+  create: async record => {
+    // `add` rejects on an existing primary key - never overwrites.
+    await db.records.add(record);
+    return record;
   },
 
   upsert: async record => {

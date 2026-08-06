@@ -1,4 +1,4 @@
-import { addressRecordSchema } from '@extension/shared';
+import { addressRecordSchema, toAddressKey } from '@extension/shared';
 import type { TraceMemoDatabase } from './schema.js';
 import type { AddressRecord, ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
 
@@ -16,19 +16,54 @@ export const buildExportEnvelope = (
 });
 
 /**
- * Validate every record in an envelope strictly. Returns the parsed records or
- * throws on the first invalid record. Import is all-or-nothing: a single
- * invalid record rejects the whole file with no database writes.
+ * Validate every record in an envelope strictly, plus cross-field and
+ * cross-record consistency. Returns the parsed records or throws on the first
+ * violation. Import is all-or-nothing: any conflict rejects the whole file
+ * with no database writes.
+ *
+ * Consistency rules:
+ * - each record's `key` equals `evm:<lowercase address>` (canonical);
+ * - within a record, chain context `chainId` values are unique;
+ * - within a chain context, source `id` values are unique;
+ * - record `key` values are unique across the whole file.
  */
 export const validateImportRecords = (records: unknown[]): AddressRecord[] => {
   const parsed: AddressRecord[] = [];
+  const seenKeys = new Set<string>();
+
   records.forEach((raw, index) => {
     const result = addressRecordSchema.safeParse(raw);
     if (!result.success) {
       throw new ImportError(`record at index ${index} is invalid`);
     }
-    parsed.push(result.data as AddressRecord);
+    const record = result.data as AddressRecord;
+
+    if (record.key !== toAddressKey(record.address)) {
+      throw new ImportError(`record at index ${index}: key does not match address`);
+    }
+
+    const chainIds = new Set<number>();
+    for (const chain of record.chains) {
+      if (chainIds.has(chain.chainId)) {
+        throw new ImportError(`record at index ${index}: duplicate chainId ${chain.chainId}`);
+      }
+      chainIds.add(chain.chainId);
+      const sourceIds = new Set<string>();
+      for (const source of chain.sources) {
+        if (sourceIds.has(source.id)) {
+          throw new ImportError(`record at index ${index}: duplicate source id on chain ${chain.chainId}`);
+        }
+        sourceIds.add(source.id);
+      }
+    }
+
+    if (seenKeys.has(record.key)) {
+      throw new ImportError(`record at index ${index}: duplicate key ${record.key}`);
+    }
+    seenKeys.add(record.key);
+    parsed.push(record);
   });
+
   return parsed;
 };
 

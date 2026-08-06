@@ -2,7 +2,7 @@ import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
 import { sendMessage } from '../../messaging';
 import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD, TAGS_MAX } from '@extension/shared';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type {
   AddressRecord,
   Confidence,
@@ -57,8 +57,26 @@ export const RecordEditor = ({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Per-chain drafts so switching chains never silently discards unsaved input.
+  const drafts = useRef<
+    Partial<Record<SupportedChainId, { chainNote: string; confidence: Confidence; sources: SourceInput[] }>>
+  >({});
+
   const switchChain = (next: SupportedChainId) => {
+    if (next === chainId) {
+      return;
+    }
+    // Stash the current chain's input.
+    drafts.current[chainId] = { chainNote, confidence, sources };
     setChainId(next);
+    // Restore a draft if we have one for the target chain; else load saved.
+    const draft = drafts.current[next];
+    if (draft) {
+      setChainNote(draft.chainNote);
+      setConfidence(draft.confidence);
+      setSources(draft.sources);
+      return;
+    }
     const ctx = initial?.chains.find(c => c.chainId === next);
     setChainNote(ctx?.note ?? '');
     setConfidence(ctx?.confidence ?? 'unverified');

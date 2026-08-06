@@ -9,5 +9,8 @@ export const PAGE_CONTEXT_KEY_PREFIX = 'tracememo-page-context:';
 
 export const pageContextStorageKey = (tabId: number): string => `${PAGE_CONTEXT_KEY_PREFIX}${tabId}`;
 
-/** Key under which a pending record key is stored (annotation click -> side panel). */
-export const PENDING_RECORD_STORAGE_KEY = 'tracememo-pending-record';
+/** Prefix for per-tab pending-record keys: `tracememo-pending-record:<tabId>`.
+ * Set when an annotation is clicked; the side panel for that tab consumes it. */
+export const PENDING_RECORD_KEY_PREFIX = 'tracememo-pending-record:';
+
+export const pendingRecordStorageKey = (tabId: number): string => `${PENDING_RECORD_KEY_PREFIX}${tabId}`;
