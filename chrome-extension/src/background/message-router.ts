@@ -5,6 +5,7 @@ import {
   toChecksumAddress,
   pageContextStorageKey,
   pendingRecordStorageKey,
+  SUPPORTED_CHAINS,
 } from '@extension/shared';
 import type { RecordsRepository } from '@extension/research-db';
 import type {
