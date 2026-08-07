@@ -35,7 +35,10 @@ export type RequestMessage =
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
   | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
-  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId: SupportedChainId } };
+  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId: SupportedChainId } }
+  | { type: 'SCAN_PAGE'; payload: { tabId: number } }
+  | { type: 'TOGGLE_SITE_PERMISSION'; payload: { origin: string; enable: boolean } }
+  | { type: 'GET_ENABLED_SITES' };
 
 /** Response envelope. Errors never carry stack traces or user record content. */
 export type ResponseMessage<T> = { ok: true; data: T } | { ok: false; error: { code: string; message: string } };
@@ -57,6 +60,9 @@ export interface ResponseMap {
   SETTINGS_GET: Settings;
   SETTINGS_UPDATE: Settings;
   OPEN_RECORD: { acknowledged: true };
+  SCAN_PAGE: { acknowledged: true };
+  TOGGLE_SITE_PERMISSION: { enabled: boolean };
+  GET_ENABLED_SITES: string[];
 }
 
 /** Standard error codes used by the background. */

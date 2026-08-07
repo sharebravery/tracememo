@@ -23,13 +23,12 @@ describe('TraceMemo manifest', () => {
   });
 
   it('declares only the allowed permissions', () => {
-    expect(manifest.permissions).toEqual(['storage', 'sidePanel']);
+    expect(manifest.permissions).toEqual(['storage', 'sidePanel', 'activeTab', 'scripting']);
   });
 
   it('does not declare any forbidden permission', () => {
     const forbidden = [
       'tabs',
-      'scripting',
       'notifications',
       'cookies',
       'history',
@@ -45,9 +44,14 @@ describe('TraceMemo manifest', () => {
     }
   });
 
-  it('never requests <all_urls> anywhere', () => {
-    const serialized = JSON.stringify(manifest);
-    expect(serialized).not.toContain('<all_urls>');
+  it('allows <all_urls> only in optional_host_permissions, not in host_permissions or content scripts', () => {
+    expect(manifest.host_permissions).not.toContain('<all_urls>');
+    expect(manifest.optional_host_permissions).toContain('<all_urls>');
+    for (const script of manifest.content_scripts ?? []) {
+      for (const match of script.matches) {
+        expect(match).not.toBe('<all_urls>');
+      }
+    }
   });
 
   it('scopes host permissions to the supported explorers', () => {
@@ -56,6 +60,7 @@ describe('TraceMemo manifest', () => {
       'https://basescan.org/*',
       'https://polygonscan.com/*',
       'https://bscscan.com/*',
+      'https://arbiscan.io/*',
     ]);
   });
 
@@ -65,6 +70,7 @@ describe('TraceMemo manifest', () => {
       'https://basescan.org/*',
       'https://polygonscan.com/*',
       'https://bscscan.com/*',
+      'https://arbiscan.io/*',
     ]);
     for (const script of manifest.content_scripts ?? []) {
       expect(script.matches.length).toBeGreaterThan(0);

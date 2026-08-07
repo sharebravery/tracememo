@@ -14,7 +14,7 @@
  */
 
 /** Supported EVM chain ids. Ethereum Mainnet and Base only for MVP. */
-export type SupportedChainId = 1 | 8453 | 137 | 56;
+export type SupportedChainId = 1 | 8453 | 137 | 56 | 42161;
 
 /** Canonical global address key: `evm:<lowercase address>`. */
 export type AddressKey = `evm:${string}`;
@@ -26,7 +26,7 @@ export type EvmAddress = `0x${string}`;
 export type Confidence = 'confirmed' | 'likely' | 'unverified';
 
 /** Supported explorer site identifiers. */
-export type SiteId = 'etherscan' | 'basescan' | 'polygonscan' | 'bscscan';
+export type SiteId = 'etherscan' | 'basescan' | 'polygonscan' | 'bscscan' | 'arbiscan';
 
 /** A persisted source backing a chain context. */
 export interface ResearchSource {
@@ -66,16 +66,18 @@ export interface SourceInput {
   title: string;
 }
 
-/** DTO for creating a global record with its first chain context. */
+/** DTO for creating a global record. `chainId` and chain-level fields are
+ * optional: a record can be saved with global context only (no chain context)
+ * when the page is not a known explorer. */
 export interface RecordCreateInput {
   address: EvmAddress;
-  chainId: SupportedChainId;
+  chainId?: SupportedChainId;
   label: string;
   tags: string[];
   note: string;
-  chainNote: string;
-  confidence: Confidence;
-  sources: SourceInput[];
+  chainNote?: string;
+  confidence?: Confidence;
+  sources?: SourceInput[];
 }
 
 /** DTO for updating global fields and upserting one chain context. */
@@ -90,16 +92,20 @@ export interface RecordUpdateInput {
   sources: SourceInput[];
 }
 
-/** Page context as authored by the content script. The background takes the
- * real tab id from MessageSender.tab.id. `chainId` is the page's chain. */
+/** Network context resolved from the page URL. Null on non-explorer pages. */
+export interface NetworkContext {
+  chainId: SupportedChainId;
+  site: SiteId;
+}
+
+/** Page context as authored by the content script. `site` and `chainId` are
+ * optional: present on explorer pages, absent on generic web pages. */
 export interface PageContextInput {
   tabUrl: string;
   pageTitle: string;
-  site: SiteId;
-  chainId: SupportedChainId;
+  site?: SiteId;
+  chainId?: SupportedChainId;
   addressKeys: AddressKey[];
-  /** The "main" address on the page (e.g. from /address/0x...). Extracted
-   * only from explicit explorer URL paths, never from tx hashes. Optional. */
   primaryAddressKey?: AddressKey;
   observedAt: string;
 }

@@ -64,7 +64,7 @@ describe('recordCreateInputSchema', () => {
     const parsed = recordCreateInputSchema.parse({ address: ADDR, chainId: 1, label: 'L', confidence: 'unverified' });
     expect(parsed.tags).toEqual([]);
     expect(parsed.note).toBe('');
-    expect(parsed.chainNote).toBe('');
+    expect(parsed.chainNote).toBeUndefined();
     expect(parsed.sources).toEqual([]);
   });
 
@@ -129,7 +129,7 @@ describe('addressRecordSchema', () => {
     expect(addressRecordSchema.parse(both).chains).toHaveLength(2);
   });
 
-  it('rejects more than four chain contexts', () => {
+  it('rejects more than five chain contexts', () => {
     const five = {
       ...validRecord,
       chains: [
@@ -159,6 +159,14 @@ describe('addressRecordSchema', () => {
         },
         {
           chainId: 56,
+          note: '',
+          confidence: 'unverified',
+          sources: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          chainId: 42161,
           note: '',
           confidence: 'unverified',
           sources: [],

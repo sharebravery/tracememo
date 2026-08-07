@@ -17,7 +17,7 @@ import type {
 interface DetectedAccount {
   key: AddressKey;
   address: EvmAddress;
-  chainId: SupportedChainId;
+  chainId: SupportedChainId | undefined;
   record?: AddressRecord;
   isPrimary: boolean;
 }
@@ -40,7 +40,7 @@ const getActiveTabId = async (): Promise<number | null> => {
 };
 
 /** Build "Also on ChainA, ChainB" for chains that have context but aren't the current one. */
-const otherChainsText = (record: AddressRecord, currentChainId: SupportedChainId): string | null => {
+const otherChainsText = (record: AddressRecord, currentChainId: SupportedChainId | undefined): string | null => {
   const others = record.chains.filter(c => c.chainId !== currentChainId);
   if (others.length === 0) return null;
   const names = others.map(c => CHAIN_LABELS[c.chainId]).join(', ');
@@ -54,7 +54,7 @@ export const CurrentPageView = () => {
     mode: 'create' | 'update';
     key?: AddressKey;
     address: EvmAddress;
-    chainId: SupportedChainId;
+    chainId: SupportedChainId | undefined;
     record?: AddressRecord;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +159,7 @@ export const CurrentPageView = () => {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-semibold text-slate-200">{t('current_page_title')}</h2>
-        {ctx && (
+        {ctx?.chainId && (
           <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-cyan-400">
             {CHAIN_LABELS[ctx.chainId]}
           </span>
@@ -201,7 +201,7 @@ export const CurrentPageView = () => {
       {hasAccounts && (
         <ul className="flex flex-col gap-1.5">
           {visible!.map(({ key, address, chainId, record, isPrimary }) => {
-            const chainCtx = record?.chains.find(c => c.chainId === chainId);
+            const chainCtx = chainId !== undefined ? record?.chains.find(c => c.chainId === chainId) : undefined;
             const alsoOn = record ? otherChainsText(record, chainId) : null;
             return (
               <li
@@ -220,15 +220,15 @@ export const CurrentPageView = () => {
                           {t('badge_private')}
                         </span>
                       </div>
-                      {chainCtx ? (
+                      {chainId !== undefined && chainCtx ? (
                         <span className="text-[10px] text-slate-500">
                           {CHAIN_LABELS[chainId]} · {t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')}
                         </span>
-                      ) : (
+                      ) : chainId !== undefined ? (
                         <span className="text-[10px] text-slate-600">
                           {t('current_page_no_context', CHAIN_LABELS[chainId])}
                         </span>
-                      )}
+                      ) : null}
                       {alsoOn && <span className="text-[10px] text-slate-600">{alsoOn}</span>}
                     </div>
                     <button

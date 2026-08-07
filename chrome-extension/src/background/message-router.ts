@@ -51,6 +51,9 @@ const SIDE_PANEL_ALLOWED = new Set<RequestMessage['type']>([
   'SETTINGS_UPDATE',
   'PAGE_CONTEXT_GET',
   'RECORDS_GET_MANY',
+  'SCAN_PAGE',
+  'TOGGLE_SITE_PERMISSION',
+  'GET_ENABLED_SITES',
 ]);
 
 const isSupportedExplorerUrl = (url: string | undefined): boolean =>
@@ -101,16 +104,18 @@ const createRecord = async (input: RecordCreateInput, repo: RecordsRepository): 
     label: input.label,
     tags: input.tags,
     note: input.note,
-    chains: [
-      {
-        chainId: input.chainId,
-        note: input.chainNote,
-        confidence: input.confidence,
-        sources: buildSources(input.sources, now),
-        createdAt: now,
-        updatedAt: now,
-      },
-    ],
+    chains: input.chainId
+      ? [
+          {
+            chainId: input.chainId,
+            note: input.chainNote ?? '',
+            confidence: input.confidence ?? 'unverified',
+            sources: buildSources(input.sources ?? [], now),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ]
+      : [],
     createdAt: now,
     updatedAt: now,
   };
@@ -267,6 +272,42 @@ export const handleMessage = async (
           [pendingRecordStorageKey(tabId)]: { key: message.payload.key, chainId: message.payload.chainId },
         });
         return { ok: true, data: { acknowledged: true as const } };
+      }
+
+      case 'SCAN_PAGE': {
+        // Inject the content script into the target tab (activeTab covers
+        // authorization for the current tab when the user clicked the toolbar).
+        await chrome.scripting.executeScript({
+          target: { tabId: message.payload.tabId },
+          files: ['content/all.iife.js'],
+        });
+        return { ok: true, data: { acknowledged: true as const } };
+      }
+
+      case 'TOGGLE_SITE_PERMISSION': {
+        const { origin, enable } = message.payload;
+        if (enable) {
+          const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
+          if (!granted) {
+            throw new RouterError(ErrorCode.FORBIDDEN, 'Permission not granted');
+          }
+          const data = await chrome.storage.local.get('tracememo-enabled-sites');
+          const sites = new Set((data['tracememo-enabled-sites'] as string[]) ?? []);
+          sites.add(origin);
+          await chrome.storage.local.set({ 'tracememo-enabled-sites': [...sites] });
+        } else {
+          await chrome.permissions.remove({ origins: [`${origin}/*`] });
+          const data = await chrome.storage.local.get('tracememo-enabled-sites');
+          const sites = new Set((data['tracememo-enabled-sites'] as string[]) ?? []);
+          sites.delete(origin);
+          await chrome.storage.local.set({ 'tracememo-enabled-sites': [...sites] });
+        }
+        return { ok: true, data: { enabled: enable } };
+      }
+
+      case 'GET_ENABLED_SITES': {
+        const data = await chrome.storage.local.get('tracememo-enabled-sites');
+        return { ok: true, data: (data['tracememo-enabled-sites'] as string[]) ?? [] };
       }
 
       default: {

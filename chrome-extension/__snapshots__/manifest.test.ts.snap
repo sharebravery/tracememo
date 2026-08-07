@@ -25,6 +25,7 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
         "https://basescan.org/*",
         "https://polygonscan.com/*",
         "https://bscscan.com/*",
+        "https://arbiscan.io/*",
       ],
       "run_at": "document_idle",
     },
@@ -36,6 +37,7 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
     "https://basescan.org/*",
     "https://polygonscan.com/*",
     "https://bscscan.com/*",
+    "https://arbiscan.io/*",
   ],
   "icons": {
     "128": "icon-128.png",
@@ -46,9 +48,14 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
   "manifest_version": 3,
   "minimum_chrome_version": "116",
   "name": "__MSG_extensionName__",
+  "optional_host_permissions": [
+    "<all_urls>",
+  ],
   "permissions": [
     "storage",
     "sidePanel",
+    "activeTab",
+    "scripting",
   ],
   "side_panel": {
     "default_path": "side-panel/index.html",

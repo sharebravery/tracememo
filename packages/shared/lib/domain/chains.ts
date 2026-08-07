@@ -17,6 +17,7 @@ export const SUPPORTED_CHAINS: readonly ChainConfig[] = [
   { id: 8453, label: 'Base', hostname: 'basescan.org', siteId: 'basescan' },
   { id: 137, label: 'Polygon', hostname: 'polygonscan.com', siteId: 'polygonscan' },
   { id: 56, label: 'BNB Smart Chain', hostname: 'bscscan.com', siteId: 'bscscan' },
+  { id: 42161, label: 'Arbitrum', hostname: 'arbiscan.io', siteId: 'arbiscan' },
 ];
 
 export const SUPPORTED_CHAIN_IDS = SUPPORTED_CHAINS.map(c => c.id) as readonly SupportedChainId[];

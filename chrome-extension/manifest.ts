@@ -17,6 +17,7 @@ const SUPPORTED_HOSTS = [
   'https://basescan.org/*',
   'https://polygonscan.com/*',
   'https://bscscan.com/*',
+  'https://arbiscan.io/*',
 ] as const;
 
 const manifest = {
@@ -26,8 +27,9 @@ const manifest = {
   name: '__MSG_extensionName__',
   description: '__MSG_extensionDescription__',
   version: packageJson.version,
-  permissions: ['storage', 'sidePanel'],
+  permissions: ['storage', 'sidePanel', 'activeTab', 'scripting'],
   host_permissions: [...SUPPORTED_HOSTS],
+  optional_host_permissions: ['<all_urls>'],
   background: {
     service_worker: 'background.js',
     type: 'module',

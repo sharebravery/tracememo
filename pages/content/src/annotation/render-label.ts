@@ -9,8 +9,8 @@ const DATA_ATTR = 'data-tracememo';
 interface AnnotationContext {
   /** Returns the global record for a canonical address key, if one exists. */
   hasRecord: (key: AddressKey) => AddressRecord | undefined;
-  /** The chain id of the current page. */
-  chainId: SupportedChainId;
+  /** The chain id of the current page. Undefined on non-explorer pages. */
+  chainId?: SupportedChainId;
   /** Called when the user activates an annotation. */
   onOpen: (key: AddressKey) => void;
 }
@@ -29,15 +29,23 @@ const CONFIDENCE_KEY: Record<string, string> = {
 };
 
 const createBadge = (record: AddressRecord, context: AnnotationContext): HTMLElement => {
-  const chainCtx = record.chains.find(c => c.chainId === context.chainId);
-  const chainName = CHAIN_LABELS[context.chainId] ?? `Chain ${context.chainId}`;
+  const chainCtx = context.chainId !== undefined ? record.chains.find(c => c.chainId === context.chainId) : undefined;
+  const chainName = context.chainId !== undefined ? (CHAIN_LABELS[context.chainId] ?? `Chain ${context.chainId}`) : '';
 
-  // Badge text: "Label · Chain · Confidence" or "Label · No Chain context"
-  const confidenceText = chainCtx
-    ? t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')
-    : t('badge_no_context' as const, chainName);
-
-  const ariaSuffix = chainCtx ? `${chainName} · ${confidenceText}` : t('badge_no_context' as const, chainName);
+  // Explorer mode: "Label · Chain · Confidence" or "Label · No Chain context"
+  // Generic mode (no chainId): "Label · private"
+  let detailText: string;
+  let ariaSuffix: string;
+  if (context.chainId !== undefined) {
+    const confidenceText = chainCtx
+      ? t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')
+      : t('badge_no_context' as const, chainName);
+    detailText = `· ${chainName} · ${confidenceText}`;
+    ariaSuffix = `${chainName} · ${confidenceText}`;
+  } else {
+    detailText = '';
+    ariaSuffix = t('badge_private' as const);
+  }
 
   const badge = document.createElement('span');
   badge.setAttribute(DATA_ATTR, 'annotation');
@@ -47,11 +55,13 @@ const createBadge = (record: AddressRecord, context: AnnotationContext): HTMLEle
   badge.style.cssText = BADGE_STYLE;
   badge.textContent = record.label;
 
-  const detail = document.createElement('span');
-  detail.setAttribute(DATA_ATTR, 'detail');
-  detail.style.cssText = CUE_STYLE;
-  detail.textContent = `· ${chainName} · ${confidenceText}`;
-  badge.appendChild(detail);
+  if (detailText) {
+    const detail = document.createElement('span');
+    detail.setAttribute(DATA_ATTR, 'detail');
+    detail.style.cssText = CUE_STYLE;
+    detail.textContent = detailText;
+    badge.appendChild(detail);
+  }
 
   const cue = document.createElement('span');
   cue.setAttribute(DATA_ATTR, 'cue');

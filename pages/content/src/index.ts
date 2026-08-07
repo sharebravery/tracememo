@@ -1,4 +1,4 @@
-import { detectSite } from './adapter/sites.js';
+import { resolveNetworkContext } from './adapter/context-resolver.js';
 import { removeAnnotations } from './annotation/remove-labels.js';
 import { renderAnnotations } from './annotation/render-label.js';
 import { extractPrimaryAddressFromPath } from './detection/primary-address.js';
@@ -6,16 +6,15 @@ import { scanAddresses } from './detection/scan-addresses.js';
 import { sendMessage } from './messaging.js';
 import { toAddressKey } from '@extension/shared';
 import { DEFAULT_SETTINGS_STATE, SETTINGS_STORAGE_KEY } from '@extension/storage';
-import type { ExplorerSite } from './adapter/sites.js';
-import type { AddressKey, AddressRecord, EvmAddress, PageContextInput, SupportedChainId } from '@extension/shared';
+import type { NetworkContext, AddressKey, AddressRecord, PageContextInput, SupportedChainId } from '@extension/shared';
 
 const DEBOUNCE_MS = 300;
 const MAX_ADAPTER_ERRORS = 5;
 const DATA_ATTR = 'data-tracememo';
 const OBSERVER_OPTIONS: MutationObserverInit = { childList: true, subtree: true, characterData: true };
 
-let site: ExplorerSite | null = null;
-let chainId: SupportedChainId = 1;
+let networkContext: NetworkContext | null = null;
+let chainId: SupportedChainId | undefined = undefined;
 let recordMap = new Map<AddressKey, AddressRecord>();
 let observer: MutationObserver | undefined;
 let rescanTimer: ReturnType<typeof setTimeout> | undefined;
@@ -23,22 +22,19 @@ let adapterErrors = 0;
 let running = false;
 let annotationsEnabled = DEFAULT_SETTINGS_STATE.annotationsEnabled;
 
-/**
- * Extract the "primary" address from the explorer URL path. Only
- * `/address/0x...` is treated as a primary address; `/tx/0x...` (a transaction
- * hash) is never mistaken for an address.
- */
-const extractPrimaryAddress = (): EvmAddress | undefined => extractPrimaryAddressFromPath(location.pathname);
-
-const buildPageContext = (addressKeys: AddressKey[], primaryAddressKey?: AddressKey): PageContextInput => ({
-  tabUrl: location.href.slice(0, 2048),
-  pageTitle: document.title.slice(0, 300),
-  site: (site as ExplorerSite).id,
-  chainId,
-  addressKeys,
-  primaryAddressKey,
-  observedAt: new Date().toISOString(),
-});
+const buildPageContext = (addressKeys: AddressKey[]): PageContextInput => {
+  const primary = extractPrimaryAddressFromPath(location.pathname);
+  const primaryKey = primary ? toAddressKey(primary) : undefined;
+  return {
+    tabUrl: location.href.slice(0, 2048),
+    pageTitle: document.title.slice(0, 300),
+    site: networkContext?.site,
+    chainId: networkContext?.chainId,
+    addressKeys,
+    primaryAddressKey: primaryKey,
+    observedAt: new Date().toISOString(),
+  };
+};
 
 const syncRecords = async (addressKeys: AddressKey[]): Promise<void> => {
   if (addressKeys.length === 0) {
@@ -51,8 +47,7 @@ const syncRecords = async (addressKeys: AddressKey[]): Promise<void> => {
 
 /**
  * Render annotation badges. Only the badge display is gated by
- * `annotationsEnabled`; detection (scan + PAGE_CONTEXT_SET + record sync) runs
- * regardless, so the Current Page view still sees addresses when labels are off.
+ * `annotationsEnabled`; detection runs regardless.
  */
 const render = (): void => {
   if (!observer || !annotationsEnabled) {
@@ -64,10 +59,9 @@ const render = (): void => {
       chainId,
       hasRecord: key => recordMap.get(key),
       onOpen: key => {
-        void sendMessage({ type: 'OPEN_RECORD', payload: { key, chainId } }).catch(() => {
-          // Opening the side panel may fail without a fresh user gesture; the
-          // pending key + chainId are still stored by the background as a fallback.
-        });
+        if (chainId) {
+          void sendMessage({ type: 'OPEN_RECORD', payload: { key, chainId } }).catch(() => {});
+        }
       },
     });
     adapterErrors = 0;
@@ -92,15 +86,14 @@ const rescan = async (): Promise<void> => {
     const addresses = scanAddresses(document.body);
     let addressKeys = addresses.map(address => toAddressKey(address));
 
-    // Ensure the primary address is in the list, deduplicated, and first.
-    const primary = extractPrimaryAddress();
+    const primary = extractPrimaryAddressFromPath(location.pathname);
     const primaryKey = primary ? toAddressKey(primary) : undefined;
     if (primaryKey) {
       addressKeys = addressKeys.filter(k => k !== primaryKey);
       addressKeys.unshift(primaryKey);
     }
 
-    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(addressKeys, primaryKey) });
+    await sendMessage({ type: 'PAGE_CONTEXT_SET', payload: buildPageContext(addressKeys) });
     await syncRecords(addressKeys);
     render();
   } catch {
@@ -126,12 +119,9 @@ const setAnnotationsEnabled = (enabled: boolean): void => {
   }
   annotationsEnabled = enabled;
   if (!enabled) {
-    // Hide labels but keep detecting (observer stays connected, rescan keeps
-    // running) so the Current Page view still reports addresses.
     removeAnnotations(document.body);
     return;
   }
-  // Re-enabled: render badges for the current recordMap.
   render();
 };
 
@@ -153,19 +143,18 @@ const onStorageChanged = (changes: { [key: string]: chrome.storage.StorageChange
 };
 
 /**
- * Entry point. Detects the site (and chain id), scans once, and starts a
- * debounced MutationObserver for dynamic content. Detection always runs; badge
- * rendering is gated by `annotationsEnabled`. Fails safely: repeated adapter
- * errors halt the observer without breaking page controls.
+ * Entry point. Resolves network context (null on non-explorer pages), scans
+ * once, and starts a debounced MutationObserver. Works on ANY page.
  */
 export const startContentScript = (): void => {
-  site = detectSite(location.hostname);
-  if (!site) {
+  // Guard against double-injection (static content_scripts + activeTab injection).
+  if (document.documentElement.getAttribute(DATA_ATTR)) {
     return;
   }
-  chainId = site.chainId;
-
   document.documentElement.setAttribute(DATA_ATTR, 'host');
+
+  networkContext = resolveNetworkContext(location.hostname);
+  chainId = networkContext?.chainId;
 
   observer = new MutationObserver(() => scheduleRescan());
   observer.observe(document.body, OBSERVER_OPTIONS);

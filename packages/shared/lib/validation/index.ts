@@ -113,13 +113,13 @@ export const sourceInputSchema = z.object({
 /** Create DTO: address + first chain context + global fields. */
 export const recordCreateInputSchema = z.object({
   address: evmAddressSchema,
-  chainId: chainIdSchema,
+  chainId: chainIdSchema.optional(),
   label: z.string().min(1).max(LABEL_MAX),
   tags: tagsSchema.default([]),
   note: z.string().max(NOTE_MAX).default(''),
-  chainNote: z.string().max(NOTE_MAX).default(''),
-  confidence: confidenceSchema,
-  sources: sourcesInputArraySchema.default([]),
+  chainNote: z.string().max(NOTE_MAX).optional(),
+  confidence: confidenceSchema.optional(),
+  sources: sourcesInputArraySchema.optional().default([]),
 });
 
 /** Update DTO: global fields + upsert one chain context (by chainId). */
@@ -156,8 +156,8 @@ export const settingsSchema = z.object({
 export const pageContextSchema = z.object({
   tabUrl: z.string().max(PAGE_URL_MAX),
   pageTitle: z.string().max(PAGE_TITLE_MAX),
-  site: z.enum(SUPPORTED_SITE_IDS as [SiteId, ...SiteId[]]),
-  chainId: chainIdSchema,
+  site: z.enum(SUPPORTED_SITE_IDS as [SiteId, ...SiteId[]]).optional(),
+  chainId: chainIdSchema.optional(),
   addressKeys: z.array(addressKeySchema).max(ACCOUNT_KEYS_MAX),
   primaryAddressKey: addressKeySchema.optional(),
   observedAt: isoTimestampSchema,
@@ -180,4 +180,10 @@ export const requestMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('SETTINGS_GET') }),
   z.object({ type: z.literal('SETTINGS_UPDATE'), payload: settingsSchema.partial() }),
   z.object({ type: z.literal('OPEN_RECORD'), payload: z.object({ key: addressKeySchema, chainId: chainIdSchema }) }),
+  z.object({ type: z.literal('SCAN_PAGE'), payload: z.object({ tabId: z.number().int().nonnegative() }) }),
+  z.object({
+    type: z.literal('TOGGLE_SITE_PERMISSION'),
+    payload: z.object({ origin: z.string().max(PAGE_URL_MAX), enable: z.boolean() }),
+  }),
+  z.object({ type: z.literal('GET_ENABLED_SITES') }),
 ]);
