@@ -14,7 +14,7 @@
  */
 
 /** Supported EVM chain ids. Ethereum Mainnet and Base only for MVP. */
-export type SupportedChainId = 1 | 8453;
+export type SupportedChainId = 1 | 8453 | 137 | 56;
 
 /** Canonical global address key: `evm:<lowercase address>`. */
 export type AddressKey = `evm:${string}`;
@@ -26,7 +26,7 @@ export type EvmAddress = `0x${string}`;
 export type Confidence = 'confirmed' | 'likely' | 'unverified';
 
 /** Supported explorer site identifiers. */
-export type SiteId = 'etherscan' | 'basescan';
+export type SiteId = 'etherscan' | 'basescan' | 'polygonscan' | 'bscscan';
 
 /** A persisted source backing a chain context. */
 export interface ResearchSource {

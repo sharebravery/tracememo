@@ -1,13 +1,16 @@
 import { ADDRESS_REGEX, ADDRESS_TEST } from '../detection/normalize-address.js';
 import { isExcludedNode } from '../detection/scan-addresses.js';
-import { toAddressKey } from '@extension/shared';
-import type { AddressKey, AddressRecord } from '@extension/shared';
+import { t } from '@extension/i18n';
+import { toAddressKey, CHAIN_LABELS } from '@extension/shared';
+import type { AddressKey, AddressRecord, SupportedChainId } from '@extension/shared';
 
 const DATA_ATTR = 'data-tracememo';
 
 interface AnnotationContext {
   /** Returns the global record for a canonical address key, if one exists. */
   hasRecord: (key: AddressKey) => AddressRecord | undefined;
+  /** The chain id of the current page. */
+  chainId: SupportedChainId;
   /** Called when the user activates an annotation. */
   onOpen: (key: AddressKey) => void;
 }
@@ -19,27 +22,44 @@ const BADGE_STYLE =
 
 const CUE_STYLE = 'font-weight:400;color:#94a3b8;font-size:9px;';
 
-const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): HTMLElement => {
+const CONFIDENCE_KEY: Record<string, string> = {
+  confirmed: 'confidence_confirmed',
+  likely: 'confidence_likely',
+  unverified: 'confidence_unverified',
+};
+
+const createBadge = (record: AddressRecord, context: AnnotationContext): HTMLElement => {
+  const chainCtx = record.chains.find(c => c.chainId === context.chainId);
+  const chainName = CHAIN_LABELS[context.chainId] ?? `Chain ${context.chainId}`;
+
+  // Badge text: "Label · Chain · Confidence" or "Label · No Chain context"
+  const confidenceText = chainCtx
+    ? t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')
+    : t('badge_no_context' as const, chainName);
+
+  const ariaSuffix = chainCtx ? `${chainName} · ${confidenceText}` : t('badge_no_context' as const, chainName);
+
   const badge = document.createElement('span');
   badge.setAttribute(DATA_ATTR, 'annotation');
   badge.setAttribute('role', 'button');
   badge.setAttribute('tabindex', '0');
-  badge.setAttribute(
-    'aria-label',
-    `TraceMemo private label: ${record.label}. Address: ${record.address}. Activate to open the record.`,
-  );
+  badge.setAttribute('aria-label', t('badge_aria_label' as const, [record.label, record.address, ariaSuffix]));
   badge.style.cssText = BADGE_STYLE;
   badge.textContent = record.label;
+
+  const detail = document.createElement('span');
+  detail.setAttribute(DATA_ATTR, 'detail');
+  detail.style.cssText = CUE_STYLE;
+  detail.textContent = `· ${chainName} · ${confidenceText}`;
+  badge.appendChild(detail);
 
   const cue = document.createElement('span');
   cue.setAttribute(DATA_ATTR, 'cue');
   cue.style.cssText = CUE_STYLE;
-  cue.textContent = '· private';
+  cue.textContent = `· ${t('badge_private' as const)}`;
   badge.appendChild(cue);
 
-  // The badge shows the global (shared) label; opening focuses the chain
-  // context for the current page, which the caller passes via onOpen.
-  const open = (): void => onOpen(toAddressKey(record.address));
+  const open = (): void => context.onOpen(toAddressKey(record.address));
   badge.addEventListener('click', event => {
     event.preventDefault();
     event.stopPropagation();
@@ -58,15 +78,9 @@ const createBadge = (record: AddressRecord, onOpen: (key: AddressKey) => void): 
 
 /**
  * Render a private badge next to every visible occurrence of an address that
- * has a saved global record. The global label is shared across chains; the
- * per-chain note/confidence/sources are shown in the side panel.
- *
+ * has a saved global record. Shows the global label + current chain status.
  * Idempotent: record-matched occurrences are wrapped in a TraceMemo-owned span
- * (excluded from rescans) so they are never annotated twice. Occurrences
- * without a record are left as plain text so they can be annotated later. The
- * original address text is never replaced or hidden.
- *
- * Returns the number of badges inserted.
+ * (excluded from rescans) so they are never annotated twice.
  */
 export const renderAnnotations = (root: Node, context: AnnotationContext): number => {
   let inserted = 0;
@@ -111,7 +125,7 @@ export const renderAnnotations = (root: Node, context: AnnotationContext): numbe
         wrapper.setAttribute(DATA_ATTR, 'address');
         wrapper.textContent = match[0];
         fragment.appendChild(wrapper);
-        fragment.appendChild(createBadge(record, context.onOpen));
+        fragment.appendChild(createBadge(record, context));
         inserted += 1;
       } else {
         fragment.appendChild(document.createTextNode(match[0]));

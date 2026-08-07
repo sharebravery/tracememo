@@ -1,6 +1,8 @@
+import { CopyAddress } from '../../components/CopyAddress';
 import { sendMessage } from '../../messaging';
 import { EmptyState } from '../library/EmptyState';
 import { RecordEditor } from '../record-editor/RecordEditor';
+import { t } from '@extension/i18n';
 import { addressKeyToAddress, CHAIN_LABELS, toChecksumAddress } from '@extension/shared';
 import { useEffect, useMemo, useState } from 'react';
 import type {
@@ -22,6 +24,12 @@ interface DetectedAccount {
 
 const PAGE_SIZE = 20;
 
+const CONFIDENCE_KEY: Record<string, string> = {
+  confirmed: 'confidence_confirmed',
+  likely: 'confidence_likely',
+  unverified: 'confidence_unverified',
+};
+
 const getActiveTabId = async (): Promise<number | null> => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -31,10 +39,12 @@ const getActiveTabId = async (): Promise<number | null> => {
   }
 };
 
-const CONFIDENCE_LABEL: Record<string, string> = {
-  confirmed: 'Confirmed',
-  likely: 'Likely',
-  unverified: 'Unverified',
+/** Build "Also on ChainA, ChainB" for chains that have context but aren't the current one. */
+const otherChainsText = (record: AddressRecord, currentChainId: SupportedChainId): string | null => {
+  const others = record.chains.filter(c => c.chainId !== currentChainId);
+  if (others.length === 0) return null;
+  const names = others.map(c => CHAIN_LABELS[c.chainId]).join(', ');
+  return t('current_page_also_on', names);
 };
 
 export const CurrentPageView = () => {
@@ -52,7 +62,6 @@ export const CurrentPageView = () => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const refresh = async () => {
-    // Reset search and pagination on tab/context change.
     setQuery('');
     setVisibleCount(PAGE_SIZE);
     try {
@@ -75,7 +84,6 @@ export const CurrentPageView = () => {
           record: byKey.get(key),
           isPrimary: key === pageCtx.primaryAddressKey,
         }));
-        // Sort: primary first, then saved, then unsaved.
         accounts.sort((a, b) => {
           if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
           const aSaved = a.record ? 0 : 1;
@@ -89,7 +97,7 @@ export const CurrentPageView = () => {
       }
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to read current page.');
+      setError(e instanceof Error ? e.message : t('msg_error_read_page'));
       setDetected([]);
     }
   };
@@ -110,7 +118,6 @@ export const CurrentPageView = () => {
     };
   }, []);
 
-  // Reset pagination when query changes.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [query]);
@@ -150,22 +157,20 @@ export const CurrentPageView = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-slate-200">Current Page</h2>
-          {ctx && (
-            <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-cyan-400">
-              {CHAIN_LABELS[ctx.chainId]}
-            </span>
-          )}
-        </div>
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-slate-200">{t('current_page_title')}</h2>
+        {ctx && (
+          <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-cyan-400">
+            {CHAIN_LABELS[ctx.chainId]}
+          </span>
+        )}
       </div>
 
       {ctx && (
         <div className="text-xs text-slate-500">
           {detected && detected.length > 0
-            ? `${detected.length} address${detected.length === 1 ? '' : 'es'} · ${savedCount} saved`
-            : 'No addresses detected'}
+            ? t('current_page_count_saved', [String(detected.length), String(savedCount)])
+            : t('current_page_no_addresses')}
         </div>
       )}
 
@@ -174,8 +179,8 @@ export const CurrentPageView = () => {
           type="search"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="Filter addresses…"
-          className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+          placeholder={t('current_page_filter_placeholder')}
+          className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
         />
       )}
 
@@ -183,50 +188,54 @@ export const CurrentPageView = () => {
         <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-xs text-rose-300">{error}</p>
       )}
 
-      {detected === null && <p className="text-sm text-slate-500">Reading page…</p>}
+      {detected === null && <p className="text-sm text-slate-500">{t('state_reading_page')}</p>}
 
       {!hasAccounts && detected !== null && !error && detected.length === 0 && (
-        <EmptyState message="No supported EVM addresses detected on this page. Open an Etherscan or BaseScan page." />
+        <EmptyState message={t('current_page_no_detected')} />
       )}
 
       {!hasAccounts && detected !== null && !error && detected.length > 0 && (
-        <p className="py-4 text-center text-sm text-slate-500">No addresses match your search.</p>
+        <p className="py-4 text-center text-sm text-slate-500">{t('current_page_no_match')}</p>
       )}
 
       {hasAccounts && (
         <ul className="flex flex-col gap-1.5">
           {visible!.map(({ key, address, chainId, record, isPrimary }) => {
             const chainCtx = record?.chains.find(c => c.chainId === chainId);
+            const alsoOn = record ? otherChainsText(record, chainId) : null;
             return (
               <li
                 key={key}
                 className={`rounded-lg border p-2.5 ${isPrimary ? 'border-violet-500/30 bg-violet-500/5' : 'border-slate-800 bg-slate-900/40'}`}>
                 <div className="flex items-center gap-1.5">
                   {isPrimary && <span className="shrink-0 text-[10px] font-medium text-violet-400">★</span>}
-                  <span className="truncate font-mono text-xs text-slate-400" title={address}>
-                    {toChecksumAddress(address)}
-                  </span>
+                  <CopyAddress address={toChecksumAddress(address)} className="min-w-0 flex-1" />
                 </div>
                 {record ? (
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-sm font-medium text-slate-100">{record.label}</span>
-                      <span className="shrink-0 rounded bg-slate-700 px-1 py-0.5 text-[9px] font-medium text-slate-300">
-                        Private
-                      </span>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-medium text-slate-100">{record.label}</span>
+                        <span className="shrink-0 rounded bg-slate-700 px-1 py-0.5 text-[9px] font-medium text-slate-300">
+                          {t('badge_private')}
+                        </span>
+                      </div>
                       {chainCtx ? (
-                        <span className="shrink-0 text-[10px] text-slate-500">
-                          {CONFIDENCE_LABEL[chainCtx.confidence]}
+                        <span className="text-[10px] text-slate-500">
+                          {CHAIN_LABELS[chainId]} · {t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')}
                         </span>
                       ) : (
-                        <span className="shrink-0 text-[10px] text-slate-600">no {CHAIN_LABELS[chainId]} context</span>
+                        <span className="text-[10px] text-slate-600">
+                          {t('current_page_no_context', CHAIN_LABELS[chainId])}
+                        </span>
                       )}
+                      {alsoOn && <span className="text-[10px] text-slate-600">{alsoOn}</span>}
                     </div>
                     <button
                       type="button"
                       onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
                       className="shrink-0 text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
-                      Edit
+                      {t('current_page_edit')}
                     </button>
                   </div>
                 ) : (
@@ -234,7 +243,7 @@ export const CurrentPageView = () => {
                     type="button"
                     onClick={() => setEditing({ mode: 'create', address, chainId })}
                     className="mt-1 rounded-lg bg-violet-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-                    Save
+                    {t('current_page_save')}
                   </button>
                 )}
               </li>
@@ -248,7 +257,7 @@ export const CurrentPageView = () => {
           type="button"
           onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
           className="self-center text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
-          Show more ({filtered!.length - visibleCount} remaining)
+          {t('current_page_show_more', String(filtered!.length - visibleCount))}
         </button>
       )}
     </div>

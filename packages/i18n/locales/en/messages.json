@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
     "description": "Extension description shown in the Chrome extensions list",
-    "message": "Private context for every onchain address. Attach a label, note, confidence, and source to EVM addresses on Etherscan and BaseScan."
+    "message": "Private context for every onchain address. Attach a label, note, confidence, and source to EVM addresses on Etherscan, BaseScan, PolygonScan and BscScan."
   },
   "extensionName": {
     "description": "Extension name",
@@ -9,25 +9,172 @@
   },
   "openSidePanel": {
     "description": "Tooltip for the toolbar icon",
-    "message": "Open TraceMemo side panel"
+    "message": "Open TraceMemo"
   },
   "tagline": {
     "description": "Short tagline shown in the side panel",
     "message": "Private context for every onchain address"
   },
-  "displayErrorInfo": {
-    "message": "Something went wrong"
+  "tab_current_page": { "message": "Current Page" },
+  "tab_library": { "message": "Library" },
+  "tab_settings": { "message": "Settings" },
+  "current_page_title": { "message": "Current Page" },
+  "current_page_count_saved": {
+    "description": "$1=total addresses, $2=saved count",
+    "message": "$1 addresses · $2 saved"
   },
-  "displayErrorDescription": {
-    "message": "Sorry, something went wrong while loading the side panel."
+  "current_page_no_addresses": { "message": "No addresses detected" },
+  "current_page_no_match": { "message": "No addresses match your search." },
+  "current_page_no_detected": {
+    "message": "No supported EVM addresses detected on this page. Open an Etherscan, BaseScan, PolygonScan or BscScan page."
   },
-  "displayErrorDetailsInfo": {
-    "message": "Error details:"
+  "current_page_show_more": {
+    "description": "$1=remaining count",
+    "message": "Show more ($1 remaining)"
   },
-  "displayErrorUnknownErrorInfo": {
-    "message": "Unknown error"
+  "current_page_filter_placeholder": { "message": "Filter addresses…" },
+  "current_page_no_context": {
+    "description": "$1=chain name",
+    "message": "No $1 context"
   },
-  "displayErrorReset": {
-    "message": "Try again"
-  }
+  "current_page_also_on": {
+    "description": "$1=comma-separated chain names",
+    "message": "Also on $1"
+  },
+  "current_page_save": { "message": "Save" },
+  "current_page_edit": { "message": "Edit" },
+  "library_title": { "message": "Library" },
+  "library_new_record": { "message": "+ New Record" },
+  "library_search_placeholder": { "message": "Label, address, note, tag" },
+  "library_search_label": { "message": "Search" },
+  "library_confidence": { "message": "Confidence" },
+  "library_all_confidence": { "message": "All confidence" },
+  "library_empty": { "message": "No saved addresses yet. Add your first record to start building context." },
+  "library_no_match": { "message": "No records match your search." },
+  "library_edit": { "message": "Edit" },
+  "library_delete": { "message": "Delete" },
+  "library_confirm_delete": { "message": "Confirm delete" },
+  "library_cancel": { "message": "Cancel" },
+  "editor_new_record": { "message": "New record" },
+  "editor_edit_record": { "message": "Edit record" },
+  "editor_back": { "message": "Back" },
+  "editor_address": { "message": "Address" },
+  "editor_address_readonly": { "message": "One global record per address; the address cannot change." },
+  "editor_label": { "message": "Label" },
+  "editor_tags": { "message": "Tags (comma-separated)" },
+  "editor_tags_hint": { "message": "Up to $1 tags." },
+  "editor_global_note": { "message": "Global note" },
+  "editor_global_note_placeholder": { "message": "Applies to this address on every chain" },
+  "editor_shared_section": { "message": "Shared across chains" },
+  "editor_chain_section": { "message": "Per-chain context" },
+  "editor_chain_note": { "message": "Chain note" },
+  "editor_chain_note_placeholder": {
+    "description": "$1=chain name",
+    "message": "Notes specific to $1"
+  },
+  "editor_chain_hint": { "message": "Note, confidence, and sources are per chain." },
+  "editor_sources": { "message": "Sources" },
+  "editor_add_source": { "message": "+ Add source" },
+  "editor_remove": { "message": "Remove" },
+  "editor_untitled_source": { "message": "Untitled source" },
+  "editor_save": { "message": "Save record" },
+  "editor_saving": { "message": "Saving…" },
+  "editor_cancel": { "message": "Cancel" },
+  "editor_your_confidence": { "message": "Your confidence" },
+  "confidence_unverified": { "message": "Unverified" },
+  "confidence_likely": { "message": "Likely" },
+  "confidence_confirmed": { "message": "Confirmed" },
+  "confidence_unverified_desc": { "message": "A starting hypothesis. Default when you have not checked yet." },
+  "confidence_likely_desc": { "message": "Some evidence supports this, but it is not confirmed." },
+  "confidence_confirmed_desc": { "message": "Your own conclusion. This is not a platform verification." },
+  "settings_title": { "message": "Settings" },
+  "settings_annotations": {
+    "description": "$1=chain names",
+    "message": "Show private labels on $1"
+  },
+  "settings_annotations_off": {
+    "message": "When off, TraceMemo stops annotating addresses on explorer pages. Your saved records are kept."
+  },
+  "settings_privacy_title": { "message": "Privacy & permissions" },
+  "settings_privacy_local": { "message": "Records stay on this device only." },
+  "settings_privacy_reads": {
+    "description": "$1=chain names",
+    "message": "TraceMemo reads $1 pages to find addresses and show your private labels."
+  },
+  "settings_privacy_no_wallet": { "message": "No wallet connection, no transactions, no balances, no RPC calls." },
+  "settings_privacy_no_analytics": { "message": "No analytics or external data transmission." },
+  "onboarding_welcome": { "message": "Welcome to TraceMemo" },
+  "onboarding_intro": {
+    "message": "TraceMemo is a local-first research notebook for EVM addresses on Etherscan, BaseScan, PolygonScan and BscScan."
+  },
+  "onboarding_b1": { "message": "Records stay on this device only - no account, no cloud sync." },
+  "onboarding_b2": { "message": "Reads explorer pages to find addresses and show your private labels." },
+  "onboarding_b3": { "message": "Never connects a wallet, requests signatures, sends transactions, or calls RPC." },
+  "onboarding_b4": { "message": "No analytics and no external data transmission." },
+  "onboarding_b5": { "message": "Export or delete all data anytime from Settings." },
+  "onboarding_get_started": { "message": "Get started" },
+  "onboarding_starting": { "message": "Starting…" },
+  "data_backup_title": { "message": "Backup & data" },
+  "data_export": { "message": "Export backup (.json)" },
+  "data_import": { "message": "Import backup…" },
+  "data_preview_title": { "message": "Import preview (all records valid)" },
+  "data_preview_counts": {
+    "description": "$1=total, $2=new, $3=update, $4=kept",
+    "message": "$1 records: $2 new, $3 to update, $4 kept (older or equal)."
+  },
+  "data_preview_note": {
+    "message": "Writes happen in one transaction. If any record were invalid the whole file would be rejected."
+  },
+  "data_confirm_import": { "message": "Confirm import" },
+  "data_import_complete": {
+    "description": "$1=created, $2=updated, $3=skipped",
+    "message": "Import complete: $1 added, $2 updated, $3 kept."
+  },
+  "data_clear": { "message": "Clear all records…" },
+  "data_clear_warning": { "message": "This deletes every saved record on this device." },
+  "data_backup_first": { "message": "Download a backup first (recommended)" },
+  "data_delete_all": { "message": "Yes, delete everything" },
+  "data_exported": {
+    "description": "$1=count",
+    "message": "Exported $1 record(s)."
+  },
+  "data_cleared": { "message": "All records cleared." },
+  "data_file_too_large": { "message": "File is $1 bytes, larger than the 10 MB limit. Import cancelled." },
+  "data_invalid_file": { "message": "Invalid TraceMemo file: $1" },
+  "state_loading": { "message": "Loading…" },
+  "state_reading_page": { "message": "Reading page…" },
+  "state_loading_records": { "message": "Loading records…" },
+  "state_error_generic": { "message": "Something went wrong" },
+  "state_error_sidepanel": { "message": "Sorry, something went wrong while loading the side panel." },
+  "state_error_details": { "message": "Error details:" },
+  "state_error_unknown": { "message": "Unknown error" },
+  "state_error_retry": { "message": "Try again" },
+  "copy_copied": { "message": "Copied" },
+  "copy_failed": { "message": "Copy failed" },
+  "copy_address_label": { "message": "Copy address" },
+  "badge_private": { "message": "private" },
+  "badge_no_context": {
+    "description": "$1=chain name",
+    "message": "No $1 context"
+  },
+  "badge_aria_label": {
+    "description": "$1=label, $2=address, $3=chain/confidence or no-context",
+    "message": "TraceMemo private label: $1. Address: $2. $3. Activate to open the record."
+  },
+  "msg_error_load_records": { "message": "Failed to load records." },
+  "msg_error_load_settings": { "message": "Failed to load settings." },
+  "msg_error_update_settings": { "message": "Failed to update settings." },
+  "msg_error_delete": { "message": "Failed to delete record." },
+  "msg_error_save": { "message": "Failed to save record." },
+  "msg_error_read_page": { "message": "Failed to read current page." },
+  "msg_error_export": { "message": "Export failed." },
+  "msg_error_import": { "message": "Import failed." },
+  "msg_error_clear": { "message": "Clear failed." },
+  "msg_already_exists": { "message": "A record for this address already exists." },
+  "validation_address": { "message": "Enter a valid EVM address (0x followed by 40 hexadecimal characters)." },
+  "validation_label": { "message": "Label must be 1-$1 characters." },
+  "validation_global_note": { "message": "Global note must be $1 characters or fewer." },
+  "validation_chain_note": { "message": "Chain note must be $1 characters or fewer." },
+  "validation_sources_max": { "message": "A chain context may have at most $1 sources." },
+  "local_first": { "message": "local-first" }
 }

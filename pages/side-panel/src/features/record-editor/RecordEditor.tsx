@@ -1,6 +1,7 @@
 import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
 import { sendMessage } from '../../messaging';
+import { t } from '@extension/i18n';
 import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD, TAGS_MAX } from '@extension/shared';
 import { useMemo, useRef, useState } from 'react';
 import type {
@@ -85,20 +86,20 @@ export const RecordEditor = ({
 
   const validate = (): string | null => {
     if (!isEvmAddress(address)) {
-      return 'Enter a valid EVM address (0x followed by 40 hexadecimal characters).';
+      return t('validation_address');
     }
     const trimmedLabel = label.trim();
     if (trimmedLabel.length < 1 || trimmedLabel.length > LABEL_MAX) {
-      return `Label must be 1-${LABEL_MAX} characters.`;
+      return t('validation_label', String(LABEL_MAX));
     }
     if (note.length > NOTE_MAX) {
-      return `Global note must be ${NOTE_MAX} characters or fewer.`;
+      return t('validation_global_note', String(NOTE_MAX));
     }
     if (chainNote.length > NOTE_MAX) {
-      return `Chain note must be ${NOTE_MAX} characters or fewer.`;
+      return t('validation_chain_note', String(NOTE_MAX));
     }
     if (sources.length > SOURCE_MAX_PER_RECORD) {
-      return `A chain context may have at most ${SOURCE_MAX_PER_RECORD} sources.`;
+      return t('validation_sources_max', String(SOURCE_MAX_PER_RECORD));
     }
     return null;
   };
@@ -142,7 +143,7 @@ export const RecordEditor = ({
       }
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save record.');
+      setError(e instanceof Error ? e.message : t('msg_error_save'));
       setSaving(false);
     }
   };
@@ -150,7 +151,9 @@ export const RecordEditor = ({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-200">{isEdit ? 'Edit record' : 'New record'}</h2>
+        <h2 className="text-sm font-semibold text-slate-200">
+          {isEdit ? t('editor_edit_record') : t('editor_new_record')}
+        </h2>
         <button
           type="button"
           onClick={onCancel}
@@ -262,7 +265,7 @@ export const RecordEditor = ({
               onChange={event => setChainNote(event.target.value)}
               maxLength={NOTE_MAX}
               rows={3}
-              placeholder={`Notes specific to ${CHAIN_LABELS[chainId]}`}
+              placeholder={t('editor_chain_note_placeholder', CHAIN_LABELS[chainId])}
               className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
           </div>
@@ -288,7 +291,7 @@ export const RecordEditor = ({
           onClick={() => void handleSave()}
           disabled={saving}
           className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save record'}
+          {saving ? t('editor_saving') : t('editor_save')}
         </button>
       </div>
     </div>

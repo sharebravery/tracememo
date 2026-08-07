@@ -1,4 +1,6 @@
 import { InlineDeleteConfirm } from './InlineDeleteConfirm';
+import { CopyAddress } from '../../components/CopyAddress';
+import { t } from '@extension/i18n';
 import { CHAIN_LABELS } from '@extension/shared';
 import type { AddressRecord, Confidence } from '@extension/shared';
 
@@ -8,24 +10,16 @@ interface AddressRowProps {
   onDelete: () => void;
 }
 
-const CONFIDENCE_LABEL: Record<Confidence, string> = {
-  confirmed: 'Confirmed',
-  likely: 'Likely',
-  unverified: 'Unverified',
+const CONFIDENCE_KEY: Record<Confidence, string> = {
+  confirmed: 'confidence_confirmed',
+  likely: 'confidence_likely',
+  unverified: 'confidence_unverified',
 };
 
 const CONFIDENCE_DOT: Record<Confidence, string> = {
   confirmed: 'text-emerald-400',
   likely: 'text-amber-400',
   unverified: 'text-slate-500',
-};
-
-const copyAddress = async (address: string) => {
-  try {
-    await navigator.clipboard.writeText(address);
-  } catch {
-    // Clipboard unavailable; the full address remains visible for manual copy.
-  }
 };
 
 export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => (
@@ -35,16 +29,10 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => (
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium text-slate-100">{record.label}</span>
           <span className="shrink-0 rounded bg-slate-700 px-1 py-0.5 text-[9px] font-medium text-slate-300">
-            Private
+            {t('badge_private')}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => void copyAddress(record.address)}
-          className="mt-0.5 block max-w-full truncate font-mono text-xs text-slate-500 hover:text-slate-300 focus:outline-none focus-visible:underline"
-          title={`Copy address ${record.address}`}>
-          {record.address}
-        </button>
+        <CopyAddress address={record.address} className="mt-0.5" />
         {record.tags.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {record.tags.map(tag => (
@@ -69,7 +57,7 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => (
           <span className="text-cyan-400">{CHAIN_LABELS[ctx.chainId]}</span>
           <span className="text-slate-600">·</span>
           <span className={CONFIDENCE_DOT[ctx.confidence]}>●</span>
-          <span>{CONFIDENCE_LABEL[ctx.confidence]}</span>
+          <span>{t(CONFIDENCE_KEY[ctx.confidence] as 'confidence_confirmed')}</span>
         </button>
       ))}
     </div>
@@ -79,7 +67,7 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => (
         type="button"
         onClick={() => onEdit(record.chains[0]?.chainId ?? 1)}
         className="text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
-        Edit
+        {t('library_edit')}
       </button>
       <InlineDeleteConfirm onConfirm={onDelete} onCancel={() => {}} />
     </div>

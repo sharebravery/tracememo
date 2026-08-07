@@ -23,6 +23,8 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
       "matches": [
         "https://etherscan.io/*",
         "https://basescan.org/*",
+        "https://polygonscan.com/*",
+        "https://bscscan.com/*",
       ],
       "run_at": "document_idle",
     },
@@ -32,6 +34,8 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
   "host_permissions": [
     "https://etherscan.io/*",
     "https://basescan.org/*",
+    "https://polygonscan.com/*",
+    "https://bscscan.com/*",
   ],
   "icons": {
     "128": "icon-128.png",

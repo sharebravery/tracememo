@@ -1,15 +1,11 @@
 import { sendMessage } from '../../messaging';
+import { t } from '@extension/i18n';
 import { useState } from 'react';
 
 interface OnboardingProps {
   onDone: () => void;
 }
 
-/**
- * First-run privacy explanation. Shown until the user dismisses it, which sets
- * `onboardingSeen` in settings. Content mirrors actual extension behavior so it
- * can serve as the privacy notice (PRD FR-10).
- */
 export const Onboarding = ({ onDone }: OnboardingProps) => {
   const [dismissing, setDismissing] = useState(false);
 
@@ -26,43 +22,35 @@ export const Onboarding = ({ onDone }: OnboardingProps) => {
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-6">
       <header className="flex flex-col items-center text-center">
-        <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-500 text-xl font-bold text-white shadow-xl shadow-violet-500/30">
+        <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600 text-xl font-bold text-white">
           T
         </span>
-        <h1 className="bg-gradient-to-r from-violet-300 via-indigo-200 to-cyan-200 bg-clip-text text-lg font-bold text-transparent">
-          Welcome to TraceMemo
-        </h1>
-        <p className="text-sm text-slate-400">Private context for every onchain address.</p>
+        <h1 className="text-lg font-bold text-slate-200">{t('onboarding_welcome')}</h1>
+        <p className="text-sm text-slate-400">{t('tagline')}</p>
       </header>
 
       <section className="flex flex-col gap-2.5 text-sm text-slate-300">
-        <p className="text-slate-400">
-          TraceMemo is a local-first research notebook for EVM addresses on Etherscan and BaseScan.
-        </p>
+        <p className="text-slate-400">{t('onboarding_intro')}</p>
         <ul className="space-y-1.5">
           <li className="flex gap-2">
-            <span className="text-violet-400">◆</span>{' '}
-            <span className="text-slate-300">Records stay on this device only - no account, no cloud sync.</span>
+            <span className="text-violet-400">◆</span>
+            <span className="text-slate-300">{t('onboarding_b1')}</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-violet-400">◆</span>{' '}
-            <span className="text-slate-300">
-              Reads Etherscan and BaseScan pages to find addresses and show your private labels.
-            </span>
+            <span className="text-violet-400">◆</span>
+            <span className="text-slate-300">{t('onboarding_b2')}</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-violet-400">◆</span>{' '}
-            <span className="text-slate-300">
-              Never connects a wallet, requests signatures, sends transactions, or calls RPC.
-            </span>
+            <span className="text-violet-400">◆</span>
+            <span className="text-slate-300">{t('onboarding_b3')}</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-violet-400">◆</span>{' '}
-            <span className="text-slate-300">No analytics and no external data transmission.</span>
+            <span className="text-violet-400">◆</span>
+            <span className="text-slate-300">{t('onboarding_b4')}</span>
           </li>
           <li className="flex gap-2">
-            <span className="text-violet-400">◆</span>{' '}
-            <span className="text-slate-300">Export or delete all data anytime from Settings.</span>
+            <span className="text-violet-400">◆</span>
+            <span className="text-slate-300">{t('onboarding_b5')}</span>
           </li>
         </ul>
       </section>
@@ -72,8 +60,8 @@ export const Onboarding = ({ onDone }: OnboardingProps) => {
           type="button"
           onClick={() => void dismiss()}
           disabled={dismissing}
-          className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60 disabled:opacity-50">
-          {dismissing ? 'Starting…' : 'Get started'}
+          className="w-full rounded-lg bg-violet-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 disabled:opacity-50">
+          {dismissing ? t('onboarding_starting') : t('onboarding_get_started')}
         </button>
       </div>
     </div>

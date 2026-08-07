@@ -12,7 +12,12 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
  * - one content script scoped to the supported explorers only;
  * - `storage` and `sidePanel` permissions only.
  */
-const SUPPORTED_HOSTS = ['https://etherscan.io/*', 'https://basescan.org/*'] as const;
+const SUPPORTED_HOSTS = [
+  'https://etherscan.io/*',
+  'https://basescan.org/*',
+  'https://polygonscan.com/*',
+  'https://bscscan.com/*',
+] as const;
 
 const manifest = {
   manifest_version: 3,

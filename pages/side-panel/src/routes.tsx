@@ -1,16 +1,16 @@
-/**
- * Side-panel tab definitions. MVP ships three views: Current Page, Library,
- * and Settings. See docs/02-TECHNICAL-ARCHITECTURE.md section 10.1.
- */
-export type TabId = 'current' | 'library' | 'settings';
+import { t } from '@extension/i18n';
 
-export interface TabDef {
+type TabId = 'current' | 'library' | 'settings';
+
+interface TabDef {
   id: TabId;
   label: string;
 }
 
-export const TABS: readonly TabDef[] = [
-  { id: 'current', label: 'Current Page' },
-  { id: 'library', label: 'Library' },
-  { id: 'settings', label: 'Settings' },
+const TABS: readonly TabDef[] = [
+  { id: 'current', label: t('tab_current_page') },
+  { id: 'library', label: t('tab_library') },
+  { id: 'settings', label: t('tab_settings') },
 ] as const;
+
+export { TABS, type TabId, type TabDef };

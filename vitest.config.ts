@@ -15,6 +15,7 @@ export default defineConfig({
       '@extension/shared': resolve(__dirname, 'packages/shared/index.mts'),
       '@extension/research-db': resolve(__dirname, 'packages/research-db/index.mts'),
       '@extension/storage': resolve(__dirname, 'packages/storage/index.mts'),
+      '@extension/i18n': resolve(__dirname, 'packages/i18n/index.mts'),
     },
   },
   test: {

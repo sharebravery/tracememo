@@ -51,7 +51,7 @@ describe('confidenceSchema / chainIdSchema / sourceInputSchema', () => {
     expect(confidenceSchema.parse('confirmed')).toBe('confirmed');
     expect(chainIdSchema.parse(1)).toBe(1);
     expect(chainIdSchema.parse(8453)).toBe(8453);
-    expect(() => chainIdSchema.parse(137)).toThrow();
+    expect(chainIdSchema.parse(137)).toBe(137);
   });
 
   it('rejects non-http source URLs', () => {
@@ -129,8 +129,8 @@ describe('addressRecordSchema', () => {
     expect(addressRecordSchema.parse(both).chains).toHaveLength(2);
   });
 
-  it('rejects more than two chain contexts', () => {
-    const three = {
+  it('rejects more than four chain contexts', () => {
+    const five = {
       ...validRecord,
       chains: [
         {
@@ -150,6 +150,22 @@ describe('addressRecordSchema', () => {
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
         {
+          chainId: 137,
+          note: '',
+          confidence: 'unverified',
+          sources: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          chainId: 56,
+          note: '',
+          confidence: 'unverified',
+          sources: [],
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
           chainId: 1,
           note: '',
           confidence: 'unverified',
@@ -159,7 +175,7 @@ describe('addressRecordSchema', () => {
         },
       ],
     };
-    expect(() => addressRecordSchema.parse(three)).toThrow();
+    expect(() => addressRecordSchema.parse(five)).toThrow();
   });
 
   it('rejects a chain-aware key', () => {

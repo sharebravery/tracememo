@@ -15,6 +15,8 @@ export interface ChainConfig {
 export const SUPPORTED_CHAINS: readonly ChainConfig[] = [
   { id: 1, label: 'Ethereum', hostname: 'etherscan.io', siteId: 'etherscan' },
   { id: 8453, label: 'Base', hostname: 'basescan.org', siteId: 'basescan' },
+  { id: 137, label: 'Polygon', hostname: 'polygonscan.com', siteId: 'polygonscan' },
+  { id: 56, label: 'BNB Smart Chain', hostname: 'bscscan.com', siteId: 'bscscan' },
 ];
 
 export const SUPPORTED_CHAIN_IDS = SUPPORTED_CHAINS.map(c => c.id) as readonly SupportedChainId[];

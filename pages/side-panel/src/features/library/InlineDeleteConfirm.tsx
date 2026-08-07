@@ -1,3 +1,4 @@
+import { t } from '@extension/i18n';
 import { useState } from 'react';
 
 interface InlineDeleteConfirmProps {
@@ -5,10 +6,6 @@ interface InlineDeleteConfirmProps {
   onCancel: () => void;
 }
 
-/**
- * Two-step inline delete confirmation (no modal library).
- * First click arms the confirm state; the second click deletes.
- */
 export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirmProps) => {
   const [armed, setArmed] = useState(false);
 
@@ -18,18 +15,18 @@ export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirm
         type="button"
         onClick={() => setArmed(true)}
         className="text-xs font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
-        Delete
+        {t('library_delete')}
       </button>
     );
   }
 
   return (
-    <span className="flex items-center gap-2" role="group" aria-label="Confirm delete">
+    <span className="flex items-center gap-2" role="group" aria-label={t('library_confirm_delete')}>
       <button
         type="button"
         onClick={onConfirm}
-        className="rounded-md bg-gradient-to-r from-rose-600 to-red-600 px-2 py-0.5 text-xs font-medium text-white shadow-md shadow-rose-500/25 transition hover:from-rose-500 hover:to-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
-        Confirm delete
+        className="rounded-md bg-rose-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
+        {t('library_confirm_delete')}
       </button>
       <button
         type="button"
@@ -38,7 +35,7 @@ export const InlineDeleteConfirm = ({ onConfirm, onCancel }: InlineDeleteConfirm
           onCancel();
         }}
         className="text-xs font-medium text-slate-400 transition hover:text-slate-200 focus:outline-none focus-visible:underline">
-        Cancel
+        {t('library_cancel')}
       </button>
     </span>
   );

@@ -1,3 +1,5 @@
+import { t } from '@extension/i18n';
+
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -6,7 +8,7 @@ interface SearchInputProps {
 export const SearchInput = ({ value, onChange }: SearchInputProps) => (
   <div className="flex flex-col gap-1">
     <label htmlFor="tracememo-search" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-      Search
+      {t('library_search_label')}
     </label>
     <div className="relative">
       <svg
@@ -24,8 +26,8 @@ export const SearchInput = ({ value, onChange }: SearchInputProps) => (
         type="search"
         value={value}
         onChange={event => onChange(event.target.value)}
-        placeholder="Label, address, note, tag"
-        className="w-full rounded-lg border border-white/10 bg-white/5 py-1.5 pl-8 pr-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+        placeholder={t('library_search_placeholder')}
+        className="w-full rounded-lg border border-slate-700 bg-slate-800/50 py-1.5 pl-8 pr-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
       />
     </div>
   </div>

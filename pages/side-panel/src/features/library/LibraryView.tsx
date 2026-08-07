@@ -4,6 +4,7 @@ import { filterRecords } from './filter-records';
 import { SearchInput } from './SearchInput';
 import { sendMessage } from '../../messaging';
 import { RecordEditor } from '../record-editor/RecordEditor';
+import { t } from '@extension/i18n';
 import { useEffect, useState } from 'react';
 import type { AddressKey, AddressRecord, Confidence, SupportedChainId } from '@extension/shared';
 
@@ -108,7 +109,7 @@ export const LibraryView = ({ initialEditKey, initialEditChainId, focusNonce }: 
           type="button"
           onClick={() => setEditing({ mode: 'create' })}
           className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
-          + New Record
+          + {t('library_new_record')}
         </button>
       </div>
 

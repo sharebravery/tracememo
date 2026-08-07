@@ -61,6 +61,7 @@ const render = (): void => {
   observer.disconnect();
   try {
     renderAnnotations(document.body, {
+      chainId,
       hasRecord: key => recordMap.get(key),
       onOpen: key => {
         void sendMessage({ type: 'OPEN_RECORD', payload: { key, chainId } }).catch(() => {

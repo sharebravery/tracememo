@@ -51,14 +51,25 @@ describe('TraceMemo manifest', () => {
   });
 
   it('scopes host permissions to the supported explorers', () => {
-    expect(manifest.host_permissions).toEqual(['https://etherscan.io/*', 'https://basescan.org/*']);
+    expect(manifest.host_permissions).toEqual([
+      'https://etherscan.io/*',
+      'https://basescan.org/*',
+      'https://polygonscan.com/*',
+      'https://bscscan.com/*',
+    ]);
   });
 
   it('scopes content scripts to the supported explorers only', () => {
-    const allowed = new Set(['https://etherscan.io/*', 'https://basescan.org/*']);
+    const allowed = new Set([
+      'https://etherscan.io/*',
+      'https://basescan.org/*',
+      'https://polygonscan.com/*',
+      'https://bscscan.com/*',
+    ]);
     for (const script of manifest.content_scripts ?? []) {
       expect(script.matches.length).toBeGreaterThan(0);
       for (const match of script.matches) {
+        // Allow any of the 4 supported hosts
         expect(allowed.has(match)).toBe(true);
       }
     }

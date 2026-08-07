@@ -1,8 +1,29 @@
 // @vitest-environment jsdom
 import { removeAnnotations } from './remove-labels.js';
 import { renderAnnotations } from './render-label.js';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AddressKey, AddressRecord } from '@extension/shared';
+
+// Mock chrome.i18n for the production t() used by render-label.
+const enMessages: Record<string, { message: string }> = {
+  confidence_confirmed: { message: 'Confirmed' },
+  confidence_likely: { message: 'Likely' },
+  confidence_unverified: { message: 'Unverified' },
+  badge_private: { message: 'private' },
+  badge_no_context: { message: 'No $1 context' },
+  badge_aria_label: { message: 'TraceMemo private label: $1. Address: $2. $3. Activate to open the record.' },
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).chrome = {
+  i18n: {
+    getMessage: vi.fn((key: string, substitutions?: string | string[]) => {
+      const msg = enMessages[key]?.message ?? key;
+      if (!substitutions) return msg;
+      const subs = Array.isArray(substitutions) ? substitutions : [substitutions];
+      return subs.reduce((acc, cur, idx) => acc.replace(`$${idx + 1}`, cur), msg);
+    }),
+  },
+};
 
 const ADDR_A = '0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed';
 const KEY_A: AddressKey = 'evm:0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed';
@@ -15,7 +36,7 @@ const makeRecord = (overrides: Partial<AddressRecord> = {}): AddressRecord => ({
   note: '',
   chains: [
     {
-      chainId: 1,
+      chainId: 1 as const,
       note: '',
       confidence: 'confirmed',
       sources: [],
@@ -35,7 +56,11 @@ beforeEach(() => {
 describe('renderAnnotations', () => {
   it('inserts a badge with the shared global label without replacing the address', () => {
     document.body.innerHTML = `<div>From ${ADDR_A} to somewhere</div>`;
-    const inserted = renderAnnotations(document.body, { hasRecord: () => makeRecord(), onOpen: () => {} });
+    const inserted = renderAnnotations(document.body, {
+      chainId: 1 as const,
+      hasRecord: () => makeRecord(),
+      onOpen: () => {},
+    });
     expect(inserted).toBe(1);
     expect(document.body.textContent).toContain(ADDR_A);
     const badge = document.body.querySelector('[data-tracememo="annotation"]');
@@ -45,12 +70,14 @@ describe('renderAnnotations', () => {
 
   it('does not annotate addresses without a record', () => {
     document.body.innerHTML = `<div>${ADDR_A}</div>`;
-    expect(renderAnnotations(document.body, { hasRecord: () => undefined, onOpen: () => {} })).toBe(0);
+    expect(
+      renderAnnotations(document.body, { chainId: 1 as const, hasRecord: () => undefined, onOpen: () => {} }),
+    ).toBe(0);
   });
 
   it('is idempotent on repeated calls', () => {
     document.body.innerHTML = `<div>${ADDR_A}</div>`;
-    const context = { hasRecord: () => makeRecord(), onOpen: () => {} };
+    const context = { chainId: 1 as const, hasRecord: () => makeRecord(), onOpen: () => {} };
     renderAnnotations(document.body, context);
     expect(renderAnnotations(document.body, context)).toBe(0);
     expect(document.body.querySelectorAll('[data-tracememo="annotation"]')).toHaveLength(1);
@@ -58,7 +85,7 @@ describe('renderAnnotations', () => {
 
   it('annotates a dynamically inserted row on rescan', () => {
     document.body.innerHTML = `<div>${ADDR_A}</div>`;
-    const context = { hasRecord: () => makeRecord(), onOpen: () => {} };
+    const context = { chainId: 1 as const, hasRecord: () => makeRecord(), onOpen: () => {} };
     renderAnnotations(document.body, context);
     const row = document.createElement('div');
     row.textContent = `transfer ${ADDR_A}`;
@@ -69,7 +96,11 @@ describe('renderAnnotations', () => {
   it('calls onOpen with the global address key when clicked', () => {
     document.body.innerHTML = `<div>${ADDR_A}</div>`;
     let opened: AddressKey | undefined;
-    renderAnnotations(document.body, { hasRecord: () => makeRecord(), onOpen: key => (opened = key) });
+    renderAnnotations(document.body, {
+      chainId: 1 as const,
+      hasRecord: () => makeRecord(),
+      onOpen: key => (opened = key),
+    });
     const badge = document.body.querySelector('[data-tracememo="annotation"]') as HTMLElement;
     badge.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(opened).toBe(KEY_A);
@@ -79,7 +110,7 @@ describe('renderAnnotations', () => {
 describe('removeAnnotations', () => {
   it('removes badges and restores the original address text', () => {
     document.body.innerHTML = `<div>${ADDR_A}</div>`;
-    renderAnnotations(document.body, { hasRecord: () => makeRecord(), onOpen: () => {} });
+    renderAnnotations(document.body, { chainId: 1 as const, hasRecord: () => makeRecord(), onOpen: () => {} });
     removeAnnotations(document.body);
     expect(document.body.querySelector('[data-tracememo]')).toBeNull();
     expect(document.body.textContent).toContain(ADDR_A);

@@ -1,4 +1,5 @@
 import { sendMessage } from '../../messaging';
+import { t } from '@extension/i18n';
 import { IMPORT_MAX_BYTES, traceMemoExportSchema } from '@extension/shared';
 import { useRef, useState } from 'react';
 import type { ImportPreview, ImportResult, TraceMemoExport } from '@extension/shared';
@@ -32,10 +33,10 @@ export const DataManagement = () => {
     try {
       const data = await sendMessage({ type: 'DATA_EXPORT' });
       downloadJson(`tracememo-backup-${todayStamp()}.json`, data);
-      setMessage(`Exported ${data.records.length} record${data.records.length === 1 ? '' : 's'}.`);
+      setMessage(t('data_exported', String(data.records.length)));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Export failed.');
+      setError(e instanceof Error ? e.message : t('msg_error_export'));
     }
   };
 
@@ -46,19 +47,18 @@ export const DataManagement = () => {
     setImportState(null);
 
     if (file.size > IMPORT_MAX_BYTES) {
-      setError(`File is ${file.size} bytes, larger than the 10 MB limit. Import cancelled.`);
+      setError(t('data_file_too_large', String(file.size)));
       return;
     }
 
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as unknown;
-      // Strict all-or-nothing validation: any invalid record rejects the file.
       const data = traceMemoExportSchema.parse(parsed) as TraceMemoExport;
       const preview = await sendMessage({ type: 'DATA_IMPORT_PREVIEW', payload: { data } });
       setImportState({ data, preview });
     } catch (e) {
-      setError(e instanceof Error ? `Invalid TraceMemo file: ${e.message}` : 'Invalid TraceMemo file.');
+      setError(e instanceof Error ? t('data_invalid_file', e.message) : t('data_invalid_file', ''));
     }
   };
 
@@ -71,7 +71,7 @@ export const DataManagement = () => {
       setMessage(null);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Import failed.');
+      setError(e instanceof Error ? e.message : t('msg_error_import'));
     }
   };
 
@@ -79,29 +79,29 @@ export const DataManagement = () => {
     try {
       await sendMessage({ type: 'DATA_CLEAR' });
       setClearArmed(false);
-      setMessage('All records cleared.');
+      setMessage(t('data_cleared'));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Clear failed.');
+      setError(e instanceof Error ? e.message : t('msg_error_clear'));
     }
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-      <h3 className="text-xs font-semibold text-slate-200">Backup &amp; data</h3>
+    <section className="flex flex-col gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+      <h3 className="text-xs font-semibold text-slate-200">{t('data_backup_title')}</h3>
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => void handleExport()}
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-          Export backup (.json)
+          className="rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+          {t('data_export')}
         </button>
         <button
           type="button"
           onClick={() => fileInput.current?.click()}
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-          Import backup…
+          className="rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-xs font-medium text-slate-200 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+          {t('data_import')}
         </button>
         <input
           ref={fileInput}
@@ -120,27 +120,28 @@ export const DataManagement = () => {
 
       {importState && (
         <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-2 text-xs text-slate-200">
-          <p className="font-medium text-violet-200">Import preview (all records valid)</p>
+          <p className="font-medium text-violet-200">{t('data_preview_title')}</p>
           <p>
-            {importState.preview.total} record{importState.preview.total === 1 ? '' : 's'}:{' '}
-            {importState.preview.created} new, {importState.preview.updated} to update, {importState.preview.skipped}{' '}
-            kept (older or equal).
+            {t('data_preview_counts', [
+              String(importState.preview.total),
+              String(importState.preview.created),
+              String(importState.preview.updated),
+              String(importState.preview.skipped),
+            ])}
           </p>
-          <p className="mt-1 text-slate-400">
-            Writes happen in one transaction. If any record were invalid the whole file would be rejected.
-          </p>
+          <p className="mt-1 text-slate-400">{t('data_preview_note')}</p>
           <div className="mt-2 flex gap-2">
             <button
               type="button"
               onClick={() => void confirmImport()}
-              className="rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
-              Confirm import
+              className="rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60">
+              {t('data_confirm_import')}
             </button>
             <button
               type="button"
               onClick={() => setImportState(null)}
-              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-              Cancel
+              className="rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+              {t('library_cancel')}
             </button>
           </div>
         </div>
@@ -148,39 +149,43 @@ export const DataManagement = () => {
 
       {importResult && (
         <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-xs text-emerald-300">
-          Import complete: {importResult.created} added, {importResult.updated} updated, {importResult.skipped} kept.
+          {t('data_import_complete', [
+            String(importResult.created),
+            String(importResult.updated),
+            String(importResult.skipped),
+          ])}
         </p>
       )}
 
-      <div className="border-t border-white/5 pt-2">
+      <div className="border-t border-slate-800 pt-2">
         {!clearArmed ? (
           <button
             type="button"
             onClick={() => setClearArmed(true)}
             className="text-xs font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
-            Clear all records…
+            {t('data_clear')}
           </button>
         ) : (
           <div className="flex flex-col gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-2 text-xs text-rose-200">
-            <p className="font-medium">This deletes every saved record on this device.</p>
+            <p className="font-medium">{t('data_clear_warning')}</p>
             <button
               type="button"
               onClick={() => void handleExport()}
               className="self-start rounded-lg border border-rose-500/40 bg-rose-500/10 px-2 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50">
-              Download a backup first (recommended)
+              {t('data_backup_first')}
             </button>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => void handleClear()}
-                className="rounded-lg bg-gradient-to-r from-rose-600 to-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow-md shadow-rose-500/25 transition hover:from-rose-500 hover:to-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
-                Yes, delete everything
+                className="rounded-lg bg-rose-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60">
+                {t('data_delete_all')}
               </button>
               <button
                 type="button"
                 onClick={() => setClearArmed(false)}
-                className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-                Cancel
+                className="rounded-lg border border-slate-700 bg-slate-800/50 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+                {t('library_cancel')}
               </button>
             </div>
           </div>

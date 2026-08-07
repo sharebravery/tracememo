@@ -1,3 +1,4 @@
+import { t } from '@extension/i18n';
 import { SOURCE_TITLE_MAX, SOURCE_URL_MAX } from '@extension/shared';
 import { useState } from 'react';
 import type { SourceInput } from '@extension/shared';
@@ -29,11 +30,11 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
   const addSource = () => {
     const trimmedUrl = url.trim();
     if (!trimmedUrl) {
-      setError('Enter a source URL.');
+      setError(t('editor_sources'));
       return;
     }
     if (!isValidHttpUrl(trimmedUrl)) {
-      setError('Source URL must start with http:// or https://');
+      setError(t('editor_sources'));
       return;
     }
 
