@@ -41,15 +41,18 @@ export const RecordEditor = ({
   onCancel,
 }: RecordEditorProps) => {
   const isEdit = mode === 'update';
-  const firstChainId = initialChainId ?? 1;
+  const firstChainId = initialChainId;
 
-  const [chainId, setChainId] = useState<SupportedChainId>(firstChainId);
+  const [chainId, setChainId] = useState<SupportedChainId | undefined>(firstChainId);
   const [address, setAddress] = useState(initial?.address ?? initialAddress ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
 
-  const initialChain = useMemo(() => initial?.chains.find(c => c.chainId === firstChainId), [initial, firstChainId]);
+  const initialChain = useMemo(
+    () => (firstChainId ? initial?.chains.find(c => c.chainId === firstChainId) : undefined),
+    [initial, firstChainId],
+  );
   const [chainNote, setChainNote] = useState(initialChain?.note ?? '');
   const [confidence, setConfidence] = useState<Confidence>(initialChain?.confidence ?? 'unverified');
   const [sources, setSources] = useState<SourceInput[]>(
@@ -68,7 +71,9 @@ export const RecordEditor = ({
       return;
     }
     // Stash the current chain's input.
-    drafts.current[chainId] = { chainNote, confidence, sources };
+    if (chainId) {
+      drafts.current[chainId] = { chainNote, confidence, sources };
+    }
     setChainId(next);
     // Restore a draft if we have one for the target chain; else load saved.
     const draft = drafts.current[next];
@@ -119,7 +124,7 @@ export const RecordEditor = ({
       if (isEdit && initial) {
         const input: RecordUpdateInput = {
           key: initial.key,
-          chainId,
+          chainId: chainId ?? 1,
           label: label.trim(),
           tags,
           note,
@@ -131,13 +136,11 @@ export const RecordEditor = ({
       } else {
         const input: RecordCreateInput = {
           address: address as EvmAddress,
-          chainId,
+          ...(chainId ? { chainId } : {}),
           label: label.trim(),
           tags,
           note,
-          chainNote,
-          confidence,
-          sources,
+          ...(chainId ? { chainNote, confidence, sources } : {}),
         };
         await sendMessage({ type: 'RECORD_CREATE', payload: input });
       }
@@ -265,7 +268,7 @@ export const RecordEditor = ({
               onChange={event => setChainNote(event.target.value)}
               maxLength={NOTE_MAX}
               rows={3}
-              placeholder={t('editor_chain_note_placeholder', CHAIN_LABELS[chainId])}
+              placeholder={chainId ? t('editor_chain_note_placeholder', CHAIN_LABELS[chainId]) : ''}
               className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
           </div>

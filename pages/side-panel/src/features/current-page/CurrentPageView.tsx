@@ -72,17 +72,27 @@ export const CurrentPageView = () => {
         setError(null);
         return;
       }
+      // For non-explorer pages, inject the scanner via activeTab.
+      // Explorer pages already have the content script running.
       const pageCtx = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
-      setCtx(pageCtx);
-      if (pageCtx && pageCtx.addressKeys.length > 0) {
-        const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: pageCtx.addressKeys } });
+      if (!pageCtx) {
+        // No page context yet — inject the scanner.
+        await sendMessage({ type: 'SCAN_PAGE', payload: { tabId } });
+        // Wait briefly for the content script to scan and send PAGE_CONTEXT_SET.
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      const ctx2 = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
+      setCtx(ctx2);
+      const effectiveCtx = ctx2 ?? pageCtx;
+      if (effectiveCtx && effectiveCtx.addressKeys.length > 0) {
+        const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: effectiveCtx.addressKeys } });
         const byKey = new Map<AddressKey, AddressRecord>(records.map(r => [r.key, r]));
-        const accounts: DetectedAccount[] = pageCtx.addressKeys.map(key => ({
+        const accounts: DetectedAccount[] = effectiveCtx.addressKeys.map(key => ({
           key,
           address: addressKeyToAddress(key),
-          chainId: pageCtx.chainId,
+          chainId: effectiveCtx.chainId,
           record: byKey.get(key),
-          isPrimary: key === pageCtx.primaryAddressKey,
+          isPrimary: key === effectiveCtx.primaryAddressKey,
         }));
         accounts.sort((a, b) => {
           if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
