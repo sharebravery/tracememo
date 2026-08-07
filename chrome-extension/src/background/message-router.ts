@@ -53,7 +53,7 @@ const SIDE_PANEL_ALLOWED = new Set<RequestMessage['type']>([
 ]);
 
 const isSupportedExplorerUrl = (url: string | undefined): boolean =>
-  Boolean(url && (url.startsWith('https://etherscan.io/') || url.startsWith('https://basescan.org/')));
+  Boolean(url && SUPPORTED_CHAINS.some(c => url.startsWith(`https://${c.hostname}/`)));
 
 const isContentSender = (sender: chrome.runtime.MessageSender): boolean =>
   sender.id === chrome.runtime.id && sender.tab?.id != null && isSupportedExplorerUrl(sender.tab.url);

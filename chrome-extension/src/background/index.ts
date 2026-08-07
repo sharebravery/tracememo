@@ -1,7 +1,7 @@
 import 'webextension-polyfill';
 import { handleMessage } from './message-router';
 import { createRecordsRepository, getDatabase } from '@extension/research-db';
-import { pageContextStorageKey } from '@extension/shared';
+import { pageContextStorageKey, SUPPORTED_CHAINS } from '@extension/shared';
 import { settingsStorage } from '@extension/storage';
 
 /**
@@ -24,7 +24,7 @@ const routerDeps = {
 };
 
 const isSupportedExplorerUrl = (url: string | undefined): boolean =>
-  Boolean(url && (url.startsWith('https://etherscan.io/') || url.startsWith('https://basescan.org/')));
+  Boolean(url && SUPPORTED_CHAINS.some(c => url.startsWith(`https://${c.hostname}/`)));
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'OPEN_RECORD' && sender.tab?.id != null && isSupportedExplorerUrl(sender.tab.url)) {
