@@ -80,16 +80,19 @@ export interface RecordCreateInput {
   sources?: SourceInput[];
 }
 
-/** DTO for updating global fields and upserting one chain context. */
+/** DTO for updating global fields and, optionally, upserting one chain context.
+ * `chainId` is optional: when absent, only the global label/tags/note are
+ * updated and no chain context is created - so editing a global-only record on
+ * a generic page never fabricates an Ethereum context. */
 export interface RecordUpdateInput {
   key: AddressKey;
-  chainId: SupportedChainId;
+  chainId?: SupportedChainId;
   label: string;
   tags: string[];
   note: string;
-  chainNote: string;
-  confidence: Confidence;
-  sources: SourceInput[];
+  chainNote?: string;
+  confidence?: Confidence;
+  sources?: SourceInput[];
 }
 
 /** Network context resolved from the page URL. Null on non-explorer pages. */

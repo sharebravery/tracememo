@@ -3,13 +3,14 @@ import { sendMessage } from '../../messaging';
 import { EmptyState } from '../library/EmptyState';
 import { RecordEditor } from '../record-editor/RecordEditor';
 import { t } from '@extension/i18n';
-import { addressKeyToAddress, CHAIN_LABELS, toChecksumAddress } from '@extension/shared';
+import { addressKeyToAddress, CHAIN_LABELS, EXPLORER_BRANDS, toChecksumAddress } from '@extension/shared';
 import { useEffect, useMemo, useState } from 'react';
 import type {
   AddressKey,
   AddressRecord,
   EvmAddress,
   PageContext,
+  SiteId,
   SourceInput,
   SupportedChainId,
 } from '@extension/shared';
@@ -39,6 +40,15 @@ const getActiveTabId = async (): Promise<number | null> => {
   }
 };
 
+/** Hostname for the context bar on a generic page. */
+const hostnameOf = (tabUrl: string): string => {
+  try {
+    return new URL(tabUrl).hostname || tabUrl;
+  } catch {
+    return tabUrl;
+  }
+};
+
 /** Build "Also on ChainA, ChainB" for chains that have context but aren't the current one. */
 const otherChainsText = (record: AddressRecord, currentChainId: SupportedChainId | undefined): string | null => {
   const others = record.chains.filter(c => c.chainId !== currentChainId);
@@ -61,7 +71,6 @@ export const CurrentPageView = () => {
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [siteEnabled, setSiteEnabled] = useState(false);
-  const [isExplorer, setIsExplorer] = useState(false);
 
   const refresh = async () => {
     setQuery('');
@@ -74,11 +83,11 @@ export const CurrentPageView = () => {
         setError(null);
         return;
       }
-      // For non-explorer pages, inject the scanner via activeTab.
-      // Explorer pages already have the content script running.
+      // For non-explorer pages, inject the scanner via activeTab. Explorer
+      // pages already have the (static) content script running; always-scan
+      // sites have a dynamically registered script.
       const pageCtx = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
       if (!pageCtx) {
-        // No page context yet — inject the scanner.
         await sendMessage({ type: 'SCAN_PAGE', payload: { tabId } });
         // Wait briefly for the content script to scan and send PAGE_CONTEXT_SET.
         await new Promise(r => setTimeout(r, 1500));
@@ -86,11 +95,13 @@ export const CurrentPageView = () => {
       const ctx2 = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
       setCtx(ctx2);
       const effectiveCtx = ctx2 ?? pageCtx;
-      setIsExplorer(Boolean(effectiveCtx?.chainId));
-      // Check if the current site is in the enabled-sites list.
-      const enabledSites = await sendMessage({ type: 'GET_ENABLED_SITES' });
       const origin = effectiveCtx?.tabUrl ? new URL(effectiveCtx.tabUrl).origin : '';
-      setSiteEnabled(enabledSites.includes(origin));
+      if (origin) {
+        const enabledSites = await sendMessage({ type: 'GET_ENABLED_SITES' });
+        setSiteEnabled(enabledSites.includes(origin));
+      } else {
+        setSiteEnabled(false);
+      }
       if (effectiveCtx && effectiveCtx.addressKeys.length > 0) {
         const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: effectiveCtx.addressKeys } });
         const byKey = new Map<AddressKey, AddressRecord>(records.map(r => [r.key, r]));
@@ -152,6 +163,39 @@ export const CurrentPageView = () => {
   const hasMore = filtered ? filtered.length > visibleCount : false;
   const savedCount = detected?.filter(d => d.record).length ?? 0;
 
+  // Context bar identity.
+  const isExplorer = Boolean(ctx?.site);
+  const siteName = ctx?.site ? EXPLORER_BRANDS[ctx.site as SiteId] : ctx?.tabUrl ? hostnameOf(ctx.tabUrl) : '';
+  const contextLabel = ctx?.chainId ? CHAIN_LABELS[ctx.chainId] : ctx ? t('current_page_global_only') : '';
+  const origin = ctx?.tabUrl
+    ? (() => {
+        try {
+          return new URL(ctx.tabUrl).origin;
+        } catch {
+          return '';
+        }
+      })()
+    : '';
+
+  const toggleAlwaysScan = async (next: boolean) => {
+    if (!origin) return;
+    setSiteEnabled(next);
+    try {
+      if (next) {
+        // Request the host permission from the side panel (user gesture). The
+        // background only registers the dynamic content script afterwards.
+        const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
+        if (!granted) {
+          setSiteEnabled(false);
+          return;
+        }
+      }
+      await sendMessage({ type: 'TOGGLE_SITE_PERMISSION', payload: { origin, enable: next } });
+    } catch {
+      setSiteEnabled(!next);
+    }
+  };
+
   if (editing) {
     const pageSource: SourceInput | undefined = ctx ? { url: ctx.tabUrl, title: ctx.pageTitle } : undefined;
     return (
@@ -174,37 +218,34 @@ export const CurrentPageView = () => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-slate-200">{t('current_page_title')}</h2>
-        {ctx?.chainId && (
-          <span className="rounded border border-slate-700 bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-cyan-400">
-            {CHAIN_LABELS[ctx.chainId]}
-          </span>
-        )}
-        {!isExplorer && ctx?.tabUrl && (
-          <button
-            type="button"
-            onClick={async () => {
-              const origin = new URL(ctx.tabUrl).origin;
-              const next = !siteEnabled;
-              setSiteEnabled(next);
-              try {
-                await sendMessage({
-                  type: 'TOGGLE_SITE_PERMISSION',
-                  payload: { origin, enable: next },
-                });
-              } catch {
-                setSiteEnabled(!next);
-              }
-            }}
-            className="ml-auto rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/50">
-            {siteEnabled ? t('current_page_disable_site') : t('current_page_enable_site')}
-          </button>
-        )}
-      </div>
-
-      {ctx && !isExplorer && !ctx.chainId && (
-        <span className="text-[10px] text-slate-600">{t('current_page_unknown_network')}</span>
+      {/* Context bar */}
+      {ctx && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/40 px-2.5 py-1.5">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-sm font-semibold text-slate-200">{siteName}</span>
+            <span className="shrink-0 text-[10px] font-medium text-slate-500">· {contextLabel}</span>
+          </div>
+          {!isExplorer && origin && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={siteEnabled}
+              aria-label={t('current_page_always_scan')}
+              onClick={() => void toggleAlwaysScan(!siteEnabled)}
+              className={`flex h-5 w-9 shrink-0 items-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 ${
+                siteEnabled ? 'border-violet-500/50 bg-violet-600' : 'border-slate-700 bg-slate-800'
+              }`}>
+              <span
+                className={`h-3.5 w-3.5 transform rounded-full bg-white shadow transition ${
+                  siteEnabled ? 'translate-x-3.5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          )}
+        </div>
+      )}
+      {!isExplorer && siteEnabled && origin && (
+        <p className="text-[10px] text-slate-600">{t('current_page_always_scan')}</p>
       )}
 
       {ctx && (
@@ -266,26 +307,51 @@ export const CurrentPageView = () => {
                           {CHAIN_LABELS[chainId]} · {t(CONFIDENCE_KEY[chainCtx.confidence] as 'confidence_confirmed')}
                         </span>
                       ) : chainId !== undefined ? (
+                        // Explorer: saved globally but missing the current chain.
                         <span className="text-[10px] text-slate-600">
                           {t('current_page_no_context', CHAIN_LABELS[chainId])}
                         </span>
-                      ) : null}
+                      ) : (
+                        // Generic page: global record only.
+                        <span className="text-[10px] text-slate-600">{t('current_page_global_record')}</span>
+                      )}
                       {alsoOn && <span className="text-[10px] text-slate-600">{alsoOn}</span>}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
-                      className="shrink-0 text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
-                      {t('current_page_edit')}
-                    </button>
+                    {chainId !== undefined && chainCtx ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
+                        className="shrink-0 text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
+                        {t('current_page_edit')}
+                      </button>
+                    ) : chainId !== undefined ? (
+                      // Explorer: add the current chain directly.
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ mode: 'update', key, address, chainId, record })}
+                        className="shrink-0 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs font-medium text-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+                        {t('current_page_add_x_context', CHAIN_LABELS[chainId])}
+                      </button>
+                    ) : (
+                      // Generic page: let the user pick a chain in the editor.
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ mode: 'update', key, address, chainId: undefined, record })}
+                        className="shrink-0 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs font-medium text-cyan-300 hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+                        {t('current_page_add_chain_context')}
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditing({ mode: 'create', address, chainId })}
-                    className="mt-1 rounded-lg bg-violet-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-                    {t('current_page_save')}
-                  </button>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-slate-600">{t('current_page_not_saved')}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ mode: 'create', address, chainId })}
+                      className="rounded-lg bg-violet-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+                      {t('current_page_save')}
+                    </button>
+                  </div>
                 )}
               </li>
             );

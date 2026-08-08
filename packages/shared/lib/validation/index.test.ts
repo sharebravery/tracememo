@@ -82,9 +82,18 @@ describe('recordCreateInputSchema', () => {
 });
 
 describe('recordUpdateInputSchema', () => {
-  it('accepts a valid update input', () => {
+  it('accepts a valid update input with a chain context', () => {
     const parsed = recordUpdateInputSchema.parse({ key: KEY, chainId: 8453, label: 'L', confidence: 'confirmed' });
-    expect(parsed.chainNote).toBe('');
+    expect(parsed.chainNote).toBeUndefined();
+    expect(parsed.sources).toEqual([]);
+  });
+
+  it('accepts a global-only update with no chainId (no chain context fabricated)', () => {
+    const parsed = recordUpdateInputSchema.parse({ key: KEY, label: 'L' });
+    expect(parsed.chainId).toBeUndefined();
+    expect(parsed.chainNote).toBeUndefined();
+    expect(parsed.confidence).toBeUndefined();
+    expect(parsed.sources).toEqual([]);
   });
 
   it('rejects an invalid key', () => {

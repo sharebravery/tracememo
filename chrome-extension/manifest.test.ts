@@ -1,5 +1,8 @@
 import manifest from './manifest';
+import { SUPPORTED_CHAINS } from '@extension/shared';
 import { describe, expect, it } from 'vitest';
+
+const expectedHosts = SUPPORTED_CHAINS.map(c => `https://${c.hostname}/*`);
 
 /**
  * Manifest policy + snapshot test.
@@ -55,27 +58,23 @@ describe('TraceMemo manifest', () => {
   });
 
   it('scopes host permissions to the supported explorers', () => {
-    expect(manifest.host_permissions).toEqual([
-      'https://etherscan.io/*',
-      'https://basescan.org/*',
-      'https://polygonscan.com/*',
-      'https://bscscan.com/*',
-      'https://arbiscan.io/*',
-    ]);
+    expect(manifest.host_permissions).toEqual(expectedHosts);
+  });
+
+  it('derives host permissions and content-script matches from SUPPORTED_CHAINS', () => {
+    // Single source of truth: the manifest must never drift from the chain registry.
+    expect(manifest.host_permissions).toEqual(expectedHosts);
+    for (const script of manifest.content_scripts ?? []) {
+      expect(script.matches).toEqual(expectedHosts);
+    }
   });
 
   it('scopes content scripts to the supported explorers only', () => {
-    const allowed = new Set([
-      'https://etherscan.io/*',
-      'https://basescan.org/*',
-      'https://polygonscan.com/*',
-      'https://bscscan.com/*',
-      'https://arbiscan.io/*',
-    ]);
+    const allowed = new Set(expectedHosts);
     for (const script of manifest.content_scripts ?? []) {
       expect(script.matches.length).toBeGreaterThan(0);
       for (const match of script.matches) {
-        // Allow any of the 4 supported hosts
+        // Allow any of the supported hosts
         expect(allowed.has(match)).toBe(true);
       }
     }

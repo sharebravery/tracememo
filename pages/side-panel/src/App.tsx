@@ -4,6 +4,7 @@ import { Onboarding } from './features/onboarding/Onboarding';
 import { SettingsView } from './features/settings/SettingsView';
 import { sendMessage } from './messaging';
 import { TABS } from './routes';
+import { t } from '@extension/i18n';
 import { PENDING_RECORD_KEY_PREFIX, pendingRecordStorageKey } from '@extension/shared';
 import { useEffect, useRef, useState } from 'react';
 import type { TabId } from './routes';
@@ -13,7 +14,7 @@ type ReadyState = { onboarding: boolean } | { loading: true };
 
 interface FocusRequest {
   key: AddressKey;
-  chainId: SupportedChainId;
+  chainId?: SupportedChainId;
   nonce: number;
 }
 
@@ -34,7 +35,7 @@ const App = () => {
 
   const consumePending = async (tabId: number): Promise<void> => {
     const data = await chrome.storage.session.get(pendingRecordStorageKey(tabId));
-    const pending = data[pendingRecordStorageKey(tabId)] as { key: AddressKey; chainId: SupportedChainId } | undefined;
+    const pending = data[pendingRecordStorageKey(tabId)] as { key: AddressKey; chainId?: SupportedChainId } | undefined;
     if (pending) {
       nonceRef.current += 1;
       setFocus({ key: pending.key, chainId: pending.chainId, nonce: nonceRef.current });
@@ -90,7 +91,7 @@ const App = () => {
   if ('loading' in ready) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-slate-400">
-        <span className="animate-pulse">Loading…</span>
+        <span className="animate-pulse">{t('state_loading')}</span>
       </div>
     );
   }

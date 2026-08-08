@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
     "description": "Chrome 扩展程序列表中显示的描述",
-    "message": "为每个链上地址提供私人上下文。在 Etherscan、BaseScan、PolygonScan 和 BscScan 上为 EVM 地址添加标签、备注、置信度和来源。"
+    "message": "为每个链上地址提供私人上下文。在任意网页上为 EVM 地址添加标签、备注、置信度和来源。"
   },
   "extensionName": {
     "description": "Extension name",
@@ -26,7 +26,7 @@
   "current_page_no_addresses": { "message": "未检测到地址" },
   "current_page_no_match": { "message": "没有匹配的地址。" },
   "current_page_no_detected": {
-    "message": "当前页面未检测到受支持的 EVM 地址。请打开 Etherscan、BaseScan、PolygonScan 或 BscScan 页面。"
+    "message": "当前页面未检测到受支持的 EVM 地址。"
   },
   "current_page_show_more": {
     "description": "$1=剩余数量",
@@ -41,20 +41,27 @@
     "description": "$1=逗号分隔的链名称",
     "message": "另有 $1 上下文"
   },
+  "current_page_always_scan": { "message": "始终扫描此网站" },
+  "current_page_global_only": { "message": "仅全局" },
+  "current_page_global_record": { "message": "全局记录" },
+  "current_page_not_saved": { "message": "未保存" },
+  "current_page_add_chain_context": { "message": "添加链上下文" },
+  "current_page_add_x_context": {
+    "description": "$1=链名称",
+    "message": "添加 $1 上下文"
+  },
   "current_page_save": { "message": "保存" },
   "current_page_edit": { "message": "编辑" },
-  "current_page_enable_site": { "message": "始终在此网站启用" },
-  "current_page_disable_site": { "message": "在此网站禁用" },
-  "current_page_site_enabled": { "message": "已在此网站启用" },
-  "current_page_unknown_network": { "message": "未知网络" },
   "library_title": { "message": "地址库" },
   "library_new_record": { "message": "+ 新建记录" },
+  "library_new_record_short": { "message": "新建记录" },
   "library_search_placeholder": { "message": "标签、地址、备注、标记" },
   "library_search_label": { "message": "搜索" },
   "library_confidence": { "message": "置信度" },
   "library_all_confidence": { "message": "全部置信度" },
   "library_empty": { "message": "还没有保存的地址。添加第一条记录开始构建上下文。" },
   "library_no_match": { "message": "没有匹配的记录。" },
+  "library_loading": { "message": "正在加载记录…" },
   "library_edit": { "message": "编辑" },
   "library_delete": { "message": "删除" },
   "library_confirm_delete": { "message": "确认删除" },
@@ -64,13 +71,17 @@
   "editor_back": { "message": "返回" },
   "editor_address": { "message": "地址" },
   "editor_address_readonly": { "message": "每个地址只有一条全局记录；地址无法修改。" },
+  "editor_address_placeholder": { "message": "0x…" },
   "editor_label": { "message": "标签" },
+  "editor_label_placeholder": { "message": "该地址的简短标签" },
   "editor_tags": { "message": "标记（逗号分隔）" },
   "editor_tags_hint": { "message": "最多 $1 个标记。" },
+  "editor_global_section": { "message": "全局" },
   "editor_global_note": { "message": "全局备注" },
   "editor_global_note_placeholder": { "message": "适用于该地址在所有链上的情况" },
-  "editor_shared_section": { "message": "跨链共享信息" },
-  "editor_chain_section": { "message": "当前链上下文" },
+  "editor_chain_section": { "message": "链上下文" },
+  "editor_add_chain_context": { "message": "添加链上下文" },
+  "editor_choose_chain": { "message": "选择链" },
   "editor_chain_note": { "message": "链级备注" },
   "editor_chain_note_placeholder": {
     "description": "$1=链名称",
@@ -79,6 +90,9 @@
   "editor_chain_hint": { "message": "备注、置信度和来源按链独立保存。" },
   "editor_sources": { "message": "来源" },
   "editor_add_source": { "message": "+ 添加来源" },
+  "editor_source_url_placeholder": { "message": "https://example.com/source" },
+  "editor_source_title_placeholder": { "message": "来源标题（可选）" },
+  "editor_source_invalid": { "message": "请输入有效的 http(s) 来源链接。" },
   "editor_remove": { "message": "移除" },
   "editor_untitled_source": { "message": "未命名来源" },
   "editor_save": { "message": "保存记录" },
@@ -96,7 +110,10 @@
     "description": "$1=链名称",
     "message": "在 $1 上显示私人标签"
   },
-  "settings_annotations_off": { "message": "关闭后，TraceMemo 将停止在浏览器页面上标注地址。已保存的记录不会被删除。" },
+  "settings_annotations_off": { "message": "关闭后，TraceMemo 将停止标注地址。已保存的记录不会被删除。" },
+  "settings_enabled_sites_title": { "message": "始终扫描的网站" },
+  "settings_enabled_sites_empty": { "message": "未启用任何网站。" },
+  "settings_enabled_sites_remove": { "message": "移除" },
   "settings_privacy_title": { "message": "隐私与权限" },
   "settings_privacy_local": { "message": "记录仅保存在本设备上。" },
   "settings_privacy_reads": {
@@ -107,10 +124,10 @@
   "settings_privacy_no_analytics": { "message": "无分析、无外部数据传输。" },
   "onboarding_welcome": { "message": "欢迎使用 TraceMemo" },
   "onboarding_intro": {
-    "message": "TraceMemo 是一个本地优先的链上地址研究笔记本，支持 Etherscan、BaseScan、PolygonScan 和 BscScan。"
+    "message": "TraceMemo 是一个本地优先的链上地址研究笔记本。它能在任意网页上识别地址，并附加你的私人标签、备注和来源。"
   },
-  "onboarding_b1": { "message": "记录仅保存在本设备上——无需账号、无云同步。" },
-  "onboarding_b2": { "message": "读取浏览器页面以发现地址并显示你的私人标签。" },
+  "onboarding_b1": { "message": "记录仅保存在本设备上--无需账号、无云同步。" },
+  "onboarding_b2": { "message": "读取网页以发现地址并显示你的私人标签。" },
   "onboarding_b3": { "message": "不连接钱包、不请求签名、不发送交易、不调用 RPC。" },
   "onboarding_b4": { "message": "无分析和外部数据传输。" },
   "onboarding_b5": { "message": "随时可在设置中导出或删除所有数据。" },

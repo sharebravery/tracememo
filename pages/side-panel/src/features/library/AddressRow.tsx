@@ -2,11 +2,11 @@ import { InlineDeleteConfirm } from './InlineDeleteConfirm';
 import { CopyAddress } from '../../components/CopyAddress';
 import { t } from '@extension/i18n';
 import { CHAIN_LABELS } from '@extension/shared';
-import type { AddressRecord, Confidence } from '@extension/shared';
+import type { AddressRecord, Confidence, SupportedChainId } from '@extension/shared';
 
 interface AddressRowProps {
   record: AddressRecord;
-  onEdit: (chainId: number) => void;
+  onEdit: (chainId: SupportedChainId | undefined) => void;
   onDelete: () => void;
 }
 
@@ -65,7 +65,7 @@ export const AddressRow = ({ record, onEdit, onDelete }: AddressRowProps) => (
     <div className="mt-2 flex items-center gap-3 border-t border-slate-800 pt-1.5">
       <button
         type="button"
-        onClick={() => onEdit(record.chains[0]?.chainId ?? 1)}
+        onClick={() => onEdit(record.chains[0]?.chainId)}
         className="text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus-visible:underline">
         {t('library_edit')}
       </button>

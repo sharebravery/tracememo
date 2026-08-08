@@ -35,7 +35,7 @@ export type RequestMessage =
   | { type: 'DATA_CLEAR' }
   | { type: 'SETTINGS_GET' }
   | { type: 'SETTINGS_UPDATE'; payload: Partial<Settings> }
-  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId: SupportedChainId } }
+  | { type: 'OPEN_RECORD'; payload: { key: AddressKey; chainId?: SupportedChainId } }
   | { type: 'SCAN_PAGE'; payload: { tabId: number } }
   | { type: 'TOGGLE_SITE_PERMISSION'; payload: { origin: string; enable: boolean } }
   | { type: 'GET_ENABLED_SITES' };

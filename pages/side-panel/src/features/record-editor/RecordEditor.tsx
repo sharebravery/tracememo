@@ -2,7 +2,15 @@ import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
 import { sendMessage } from '../../messaging';
 import { t } from '@extension/i18n';
-import { CHAIN_LABELS, isEvmAddress, LABEL_MAX, NOTE_MAX, SOURCE_MAX_PER_RECORD, TAGS_MAX } from '@extension/shared';
+import {
+  CHAIN_LABELS,
+  isEvmAddress,
+  LABEL_MAX,
+  NOTE_MAX,
+  SOURCE_MAX_PER_RECORD,
+  SUPPORTED_CHAINS,
+  TAGS_MAX,
+} from '@extension/shared';
 import { useMemo, useRef, useState } from 'react';
 import type {
   AddressRecord,
@@ -31,6 +39,8 @@ const parseTags = (text: string): string[] =>
     .filter(Boolean)
     .slice(0, TAGS_MAX);
 
+const FIRST_CHAIN_ID = SUPPORTED_CHAINS[0]?.id;
+
 export const RecordEditor = ({
   mode,
   initial,
@@ -41,17 +51,19 @@ export const RecordEditor = ({
   onCancel,
 }: RecordEditorProps) => {
   const isEdit = mode === 'update';
-  const firstChainId = initialChainId;
 
-  const [chainId, setChainId] = useState<SupportedChainId | undefined>(firstChainId);
+  // chainId is undefined for a global-only record (generic page, or a saved
+  // record with no chain contexts yet). The Chain Context section only appears
+  // once the user adds one - we never fabricate a chain context by default.
+  const [chainId, setChainId] = useState<SupportedChainId | undefined>(initialChainId);
   const [address, setAddress] = useState(initial?.address ?? initialAddress ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
 
   const initialChain = useMemo(
-    () => (firstChainId ? initial?.chains.find(c => c.chainId === firstChainId) : undefined),
-    [initial, firstChainId],
+    () => (initialChainId ? initial?.chains.find(c => c.chainId === initialChainId) : undefined),
+    [initial, initialChainId],
   );
   const [chainNote, setChainNote] = useState(initialChain?.note ?? '');
   const [confidence, setConfidence] = useState<Confidence>(initialChain?.confidence ?? 'unverified');
@@ -100,7 +112,7 @@ export const RecordEditor = ({
     if (note.length > NOTE_MAX) {
       return t('validation_global_note', String(NOTE_MAX));
     }
-    if (chainNote.length > NOTE_MAX) {
+    if (chainId && chainNote.length > NOTE_MAX) {
       return t('validation_chain_note', String(NOTE_MAX));
     }
     if (sources.length > SOURCE_MAX_PER_RECORD) {
@@ -122,25 +134,23 @@ export const RecordEditor = ({
     const tags = parseTags(tagsText);
     try {
       if (isEdit && initial) {
+        // Without a chainId, only global fields are updated - no chain context
+        // is created. With a chainId, that one chain context is upserted.
         const input: RecordUpdateInput = {
           key: initial.key,
-          chainId: chainId ?? 1,
           label: label.trim(),
           tags,
           note,
-          chainNote,
-          confidence,
-          sources,
+          ...(chainId ? { chainId, chainNote, confidence, sources } : {}),
         };
         await sendMessage({ type: 'RECORD_UPDATE', payload: input });
       } else {
         const input: RecordCreateInput = {
           address: address as EvmAddress,
-          ...(chainId ? { chainId } : {}),
+          ...(chainId ? { chainId, chainNote, confidence, sources } : {}),
           label: label.trim(),
           tags,
           note,
-          ...(chainId ? { chainNote, confidence, sources } : {}),
         };
         await sendMessage({ type: 'RECORD_CREATE', payload: input });
       }
@@ -161,36 +171,37 @@ export const RecordEditor = ({
           type="button"
           onClick={onCancel}
           className="text-xs font-medium text-slate-400 transition hover:text-slate-200 focus:outline-none focus-visible:underline">
-          Back
+          {t('editor_back')}
         </button>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="tracememo-address" className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-          Address
-        </label>
-        <input
-          id="tracememo-address"
-          type="text"
-          value={address}
-          onChange={event => setAddress(event.target.value)}
-          readOnly={isEdit}
-          spellCheck={false}
-          autoComplete="off"
-          placeholder="0x…"
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 read-only:opacity-60 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-        />
-        {isEdit && (
-          <p className="text-[11px] text-slate-500">One global record per address; the address cannot change.</p>
-        )}
-      </div>
-
+      {/* Global section - always shown. */}
       <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-2.5">
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">Shared across chains</p>
+        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+          {t('editor_global_section')}
+        </p>
         <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-address" className="text-[11px] font-medium text-slate-400">
+              {t('editor_address')}
+            </label>
+            <input
+              id="tracememo-address"
+              type="text"
+              value={address}
+              onChange={event => setAddress(event.target.value)}
+              readOnly={isEdit}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder={t('editor_address_placeholder')}
+              className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 read-only:opacity-60 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+            />
+            {isEdit && <p className="text-[11px] text-slate-500">{t('editor_address_readonly')}</p>}
+          </div>
+
+          <div className="flex flex-col gap-1">
             <label htmlFor="tracememo-label" className="text-[11px] font-medium text-slate-400">
-              Label
+              {t('editor_label')}
             </label>
             <input
               id="tracememo-label"
@@ -198,7 +209,7 @@ export const RecordEditor = ({
               value={label}
               onChange={event => setLabel(event.target.value)}
               maxLength={LABEL_MAX}
-              placeholder="Short label for this address"
+              placeholder={t('editor_label_placeholder')}
               className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
             <p className="text-[10px] text-slate-600">
@@ -208,7 +219,7 @@ export const RecordEditor = ({
 
           <div className="flex flex-col gap-1">
             <label htmlFor="tracememo-tags" className="text-[11px] font-medium text-slate-400">
-              Tags (comma-separated)
+              {t('editor_tags')}
             </label>
             <input
               id="tracememo-tags"
@@ -218,12 +229,12 @@ export const RecordEditor = ({
               placeholder="wallet, exchange, suspicious"
               className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
-            <p className="text-[10px] text-slate-600">Up to {TAGS_MAX} tags.</p>
+            <p className="text-[10px] text-slate-600">{t('editor_tags_hint', String(TAGS_MAX))}</p>
           </div>
 
           <div className="flex flex-col gap-1">
             <label htmlFor="tracememo-note" className="text-[11px] font-medium text-slate-400">
-              Global note
+              {t('editor_global_note')}
             </label>
             <textarea
               id="tracememo-note"
@@ -231,51 +242,70 @@ export const RecordEditor = ({
               onChange={event => setNote(event.target.value)}
               maxLength={NOTE_MAX}
               rows={2}
-              placeholder="Applies to this address on every chain"
+              placeholder={t('editor_global_note_placeholder')}
               className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
           </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-700 bg-slate-800/20 p-2.5">
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-cyan-500">Per-chain context</p>
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-col gap-1">
-            <select
-              id="tracememo-chain"
-              value={chainId}
-              onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
-              className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30">
-              {(Object.keys(CHAIN_LABELS) as unknown as SupportedChainId[]).map(id => (
-                <option key={id} value={id} className="bg-slate-900">
-                  {CHAIN_LABELS[id]}
-                </option>
-              ))}
-            </select>
-            <p className="text-[10px] text-slate-600">Note, confidence, and sources are per chain.</p>
+      {/* Chain Context section - only when a chain is set (existing or added). */}
+      {chainId ? (
+        <div className="rounded-lg border border-slate-700 bg-slate-800/20 p-2.5">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-cyan-500">
+            {t('editor_chain_section')}
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="tracememo-chain" className="text-[11px] font-medium text-slate-400">
+                {t('editor_choose_chain')}
+              </label>
+              <select
+                id="tracememo-chain"
+                value={chainId}
+                onChange={event => switchChain(Number(event.target.value) as SupportedChainId)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30">
+                {SUPPORTED_CHAINS.map(c => (
+                  <option key={c.id} value={c.id} className="bg-slate-900">
+                    {CHAIN_LABELS[c.id]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-slate-600">{t('editor_chain_hint')}</p>
+            </div>
+
+            <ConfidenceSelect value={confidence} onChange={setConfidence} />
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="tracememo-chain-note" className="text-[11px] font-medium text-slate-400">
+                {t('editor_chain_note')}
+              </label>
+              <textarea
+                id="tracememo-chain-note"
+                value={chainNote}
+                onChange={event => setChainNote(event.target.value)}
+                maxLength={NOTE_MAX}
+                rows={3}
+                placeholder={t('editor_chain_note_placeholder', CHAIN_LABELS[chainId])}
+                className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
+              />
+            </div>
+
+            <SourceList sources={sources} onChange={setSources} />
           </div>
-
-          <ConfidenceSelect value={confidence} onChange={setConfidence} />
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="tracememo-chain-note" className="text-[11px] font-medium text-slate-400">
-              Chain note
-            </label>
-            <textarea
-              id="tracememo-chain-note"
-              value={chainNote}
-              onChange={event => setChainNote(event.target.value)}
-              maxLength={NOTE_MAX}
-              rows={3}
-              placeholder={chainId ? t('editor_chain_note_placeholder', CHAIN_LABELS[chainId]) : ''}
-              className="w-full resize-y rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
-            />
-          </div>
-
-          <SourceList sources={sources} onChange={setSources} />
         </div>
-      </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            if (FIRST_CHAIN_ID) {
+              switchChain(FIRST_CHAIN_ID);
+            }
+          }}
+          className="self-start rounded-lg border border-dashed border-slate-700 bg-slate-900/30 px-3 py-1.5 text-xs font-medium text-cyan-400 transition hover:border-cyan-500/50 hover:bg-slate-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
+          + {t('editor_add_chain_context')}
+        </button>
+      )}
 
       {error && (
         <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-2 py-1.5 text-xs text-rose-300">{error}</p>
@@ -287,7 +317,7 @@ export const RecordEditor = ({
           onClick={onCancel}
           disabled={saving}
           className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 disabled:opacity-50">
-          Cancel
+          {t('editor_cancel')}
         </button>
         <button
           type="button"
