@@ -76,6 +76,7 @@
   "editor_label_placeholder": { "message": "该地址的简短标签" },
   "editor_tags": { "message": "标记（逗号分隔）" },
   "editor_tags_hint": { "message": "最多 $1 个标记。" },
+  "editor_tags_placeholder": { "message": "钱包, 交易所, 可疑" },
   "editor_global_section": { "message": "全局" },
   "editor_global_note": { "message": "全局备注" },
   "editor_global_note_placeholder": { "message": "适用于该地址在所有链上的情况" },

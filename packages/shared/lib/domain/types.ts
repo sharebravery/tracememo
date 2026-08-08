@@ -13,7 +13,8 @@
  * lives in each chain context, never in the global key.
  */
 
-/** Supported EVM chain ids. Ethereum Mainnet and Base only for MVP. */
+/** Supported EVM chain ids. The source of truth is `SUPPORTED_CHAINS` in
+ * `chains.ts`; this union is kept explicit (no derived generic) on purpose. */
 export type SupportedChainId = 1 | 8453 | 137 | 56 | 42161;
 
 /** Canonical global address key: `evm:<lowercase address>`. */

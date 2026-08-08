@@ -39,8 +39,6 @@ const parseTags = (text: string): string[] =>
     .filter(Boolean)
     .slice(0, TAGS_MAX);
 
-const FIRST_CHAIN_ID = SUPPORTED_CHAINS[0]?.id;
-
 export const RecordEditor = ({
   mode,
   initial,
@@ -54,8 +52,11 @@ export const RecordEditor = ({
 
   // chainId is undefined for a global-only record (generic page, or a saved
   // record with no chain contexts yet). The Chain Context section only appears
-  // once the user adds one - we never fabricate a chain context by default.
+  // once the user explicitly chooses a chain - we never fabricate a chain
+  // context by default (no Ethereum default). `chainPickerOpen` reveals the
+  // chain selector before any chain is chosen.
   const [chainId, setChainId] = useState<SupportedChainId | undefined>(initialChainId);
+  const [chainPickerOpen, setChainPickerOpen] = useState(false);
   const [address, setAddress] = useState(initial?.address ?? initialAddress ?? '');
   const [label, setLabel] = useState(initial?.label ?? '');
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
@@ -226,7 +227,7 @@ export const RecordEditor = ({
               type="text"
               value={tagsText}
               onChange={event => setTagsText(event.target.value)}
-              placeholder="wallet, exchange, suspicious"
+              placeholder={t('editor_tags_placeholder')}
               className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30"
             />
             <p className="text-[10px] text-slate-600">{t('editor_tags_hint', String(TAGS_MAX))}</p>
@@ -294,14 +295,47 @@ export const RecordEditor = ({
             <SourceList sources={sources} onChange={setSources} />
           </div>
         </div>
+      ) : chainPickerOpen ? (
+        <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900/30 p-2.5">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="tracememo-chain" className="text-[11px] font-medium text-slate-400">
+              {t('editor_choose_chain')}
+            </label>
+            <select
+              id="tracememo-chain"
+              value=""
+              onChange={event => {
+                const next = Number(event.target.value);
+                if (next) {
+                  // Choosing a chain sets chainId; confidence/note/sources only
+                  // appear after this choice. No ChainContext is created until
+                  // the user picks a chain and saves.
+                  switchChain(next as SupportedChainId);
+                }
+              }}
+              className="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-2 py-1.5 text-sm text-slate-100 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/30">
+              <option value="" disabled>
+                {t('editor_choose_chain')}
+              </option>
+              {SUPPORTED_CHAINS.map(c => (
+                <option key={c.id} value={c.id} className="bg-slate-900">
+                  {CHAIN_LABELS[c.id]}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-600">{t('editor_chain_hint')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setChainPickerOpen(false)}
+            className="mt-1 self-start text-[11px] font-medium text-slate-500 transition hover:text-slate-300 focus:outline-none focus-visible:underline">
+            {t('editor_cancel')}
+          </button>
+        </div>
       ) : (
         <button
           type="button"
-          onClick={() => {
-            if (FIRST_CHAIN_ID) {
-              switchChain(FIRST_CHAIN_ID);
-            }
-          }}
+          onClick={() => setChainPickerOpen(true)}
           className="self-start rounded-lg border border-dashed border-slate-700 bg-slate-900/30 px-3 py-1.5 text-xs font-medium text-cyan-400 transition hover:border-cyan-500/50 hover:bg-slate-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
           + {t('editor_add_chain_context')}
         </button>

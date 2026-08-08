@@ -76,6 +76,7 @@
   "editor_label_placeholder": { "message": "Short label for this address" },
   "editor_tags": { "message": "Tags (comma-separated)" },
   "editor_tags_hint": { "message": "Up to $1 tags." },
+  "editor_tags_placeholder": { "message": "wallet, exchange, suspicious" },
   "editor_global_section": { "message": "Global" },
   "editor_global_note": { "message": "Global note" },
   "editor_global_note_placeholder": { "message": "Applies to this address on every chain" },

@@ -192,6 +192,9 @@ export const CurrentPageView = () => {
       }
       await sendMessage({ type: 'TOGGLE_SITE_PERMISSION', payload: { origin, enable: next } });
     } catch {
+      // TOGGLE_SITE_PERMISSION failed. For an enable, the background already
+      // released the just-granted host permission (see enableSite rollback), so
+      // here we only need to restore the switch to its previous state.
       setSiteEnabled(!next);
     }
   };
