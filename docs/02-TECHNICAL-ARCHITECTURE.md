@@ -214,7 +214,8 @@ const manifest = {
   name: '__MSG_extensionName__',
   description: '__MSG_extensionDescription__',
   version: packageJson.version,
-  permissions: ['storage', 'sidePanel'],
+  permissions: ['storage', 'sidePanel', 'activeTab', 'scripting'],
+  optional_host_permissions: ['<all_urls>'],
   host_permissions: [
     'https://etherscan.io/*',
     'https://basescan.org/*',

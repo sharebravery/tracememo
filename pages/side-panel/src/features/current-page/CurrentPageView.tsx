@@ -60,6 +60,8 @@ export const CurrentPageView = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [siteEnabled, setSiteEnabled] = useState(false);
+  const [isExplorer, setIsExplorer] = useState(false);
 
   const refresh = async () => {
     setQuery('');
@@ -84,6 +86,11 @@ export const CurrentPageView = () => {
       const ctx2 = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
       setCtx(ctx2);
       const effectiveCtx = ctx2 ?? pageCtx;
+      setIsExplorer(Boolean(effectiveCtx?.chainId));
+      // Check if the current site is in the enabled-sites list.
+      const enabledSites = await sendMessage({ type: 'GET_ENABLED_SITES' });
+      const origin = effectiveCtx?.tabUrl ? new URL(effectiveCtx.tabUrl).origin : '';
+      setSiteEnabled(enabledSites.includes(origin));
       if (effectiveCtx && effectiveCtx.addressKeys.length > 0) {
         const records = await sendMessage({ type: 'RECORDS_GET_MANY', payload: { keys: effectiveCtx.addressKeys } });
         const byKey = new Map<AddressKey, AddressRecord>(records.map(r => [r.key, r]));
@@ -174,7 +181,31 @@ export const CurrentPageView = () => {
             {CHAIN_LABELS[ctx.chainId]}
           </span>
         )}
+        {!isExplorer && ctx?.tabUrl && (
+          <button
+            type="button"
+            onClick={async () => {
+              const origin = new URL(ctx.tabUrl).origin;
+              const next = !siteEnabled;
+              setSiteEnabled(next);
+              try {
+                await sendMessage({
+                  type: 'TOGGLE_SITE_PERMISSION',
+                  payload: { origin, enable: next },
+                });
+              } catch {
+                setSiteEnabled(!next);
+              }
+            }}
+            className="ml-auto rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-700 focus:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/50">
+            {siteEnabled ? t('current_page_disable_site') : t('current_page_enable_site')}
+          </button>
+        )}
       </div>
+
+      {ctx && !isExplorer && !ctx.chainId && (
+        <span className="text-[10px] text-slate-600">{t('current_page_unknown_network')}</span>
+      )}
 
       {ctx && (
         <div className="text-xs text-slate-500">

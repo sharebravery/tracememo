@@ -34,11 +34,14 @@ The extension processes the following data, all on your device:
 
 | Permission | Why |
 |---|---|
-| `storage` | Persist records (IndexedDB) and small settings (`chrome.storage.local`); per-tab page context (`chrome.storage.session`). |
+| `storage` | Persist records (IndexedDB) and small settings; per-tab page context (`chrome.storage.session`). |
 | `sidePanel` | Open the side panel as the primary UI. |
-| Host access to `etherscan.io` and `basescan.org` | Detect addresses on those pages and show private labels beside them. |
+| `activeTab` | Temporarily scan the current page when you click the toolbar (any website). |
+| `scripting` | Inject the EVM scanner into the current tab on demand. |
+| Host access to 5 explorers | Auto-detect addresses on Etherscan, BaseScan, PolygonScan, BscScan, Arbiscan. |
+| `optional_host_permissions: <all_urls>` | Used only when you explicitly enable "Always enable on this site" for a specific website. |
 
-The manifest does **not** request `<all_urls>`, `tabs`, `scripting`, `cookies`, `history`, `webRequest`, `clipboardRead`, or any broad host access. `chrome.tabs.query`/`onActivated`/`onRemoved` are used without the `tabs` permission (only the active tab id is read; page URLs/titles come from the content script on supported pages).
+The manifest requests `activeTab` and `scripting` for on-demand page scanning. `<all_urls>` appears only in `optional_host_permissions` (user must explicitly grant per-site). The manifest does **not** request `tabs`, `cookies`, `history`, `webRequest`, `clipboardRead`, or any broad host access. `chrome.tabs.query`/`onActivated`/`onRemoved` are used without the `tabs` permission (only the active tab id is read; page URLs/titles come from the content script on supported pages).
 
 ## User-generated labels
 

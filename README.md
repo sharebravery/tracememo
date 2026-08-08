@@ -28,8 +28,15 @@ See [`docs/privacy.md`](docs/privacy.md) for the full privacy notice and [`docs/
 
 ## Supported sites
 
-- `https://etherscan.io/*` (Ethereum Mainnet, chain id 1)
-- `https://basescan.org/*` (Base, chain id 8453)
+TraceMemo works on **any webpage** that contains EVM addresses. On known explorer pages it additionally resolves chain context:
+
+- `etherscan.io` (Ethereum, chain id 1)
+- `basescan.org` (Base, chain id 8453)
+- `polygonscan.com` (Polygon, chain id 137)
+- `bscscan.com` (BNB Smart Chain, chain id 56)
+- `arbiscan.io` (Arbitrum, chain id 42161)
+
+On other websites, TraceMemo shows the global label without chain-specific context. Click the toolbar to scan the current page. Use "Always enable on this site" to auto-scan a site on every visit.
 
 Chrome only (Manifest V3). Firefox is not supported.
 
@@ -57,6 +64,17 @@ pnpm zip              # build + package a ZIP into dist-zip/
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint, type-check, test, build, and zip on every pull request and push to `main`.
+
+## Internationalization
+
+- English (default and fallback)
+- 简体中文 (zh_CN, auto-selected by Chrome language)
+
+## Privacy
+
+- Records are stored only on your device (IndexedDB). No account, no cloud sync, no backend.
+- TraceMemo scans pages for EVM addresses. On explorer pages (Etherscan, BaseScan, PolygonScan, BscScan, Arbiscan) this happens automatically. On other pages, scanning happens only when you click the toolbar (activeTab) or explicitly enable the site.
+- No wallet, no RPC, no analytics, no remote code.
 
 ## Project layout
 
