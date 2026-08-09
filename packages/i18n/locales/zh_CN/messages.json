@@ -169,6 +169,7 @@
   "state_error_retry": { "message": "重试" },
   "copy_copied": { "message": "已复制" },
   "copy_failed": { "message": "复制失败" },
+  "copy": { "message": "复制" },
   "copy_address_label": { "message": "复制地址" },
   "badge_private": { "message": "仅本地" },
   "badge_no_context": {

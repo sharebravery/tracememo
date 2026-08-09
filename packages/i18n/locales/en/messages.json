@@ -173,6 +173,7 @@
   "state_error_retry": { "message": "Try again" },
   "copy_copied": { "message": "Copied" },
   "copy_failed": { "message": "Copy failed" },
+  "copy": { "message": "Copy" },
   "copy_address_label": { "message": "Copy address" },
   "badge_private": { "message": "private" },
   "badge_no_context": {

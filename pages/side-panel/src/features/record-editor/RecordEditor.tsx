@@ -1,5 +1,6 @@
 import { ConfidenceSelect } from './ConfidenceSelect';
 import { SourceList } from './SourceList';
+import { useCopyAddress } from '../../hooks/use-copy-address';
 import { sendMessage } from '../../messaging';
 import { t } from '@extension/i18n';
 import {
@@ -73,6 +74,9 @@ export const RecordEditor = ({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // One-click copy for the readOnly address (edit mode). Reuses the shared
+  // hook so feedback matches CopyAddress elsewhere in the UI.
+  const { copy, status } = useCopyAddress();
 
   // Per-chain drafts so switching chains never silently discards unsaved input.
   const drafts = useRef<
@@ -186,17 +190,35 @@ export const RecordEditor = ({
             <label htmlFor="tracememo-address" className="text-[11px] font-medium text-slate-400">
               {t('editor_address')}
             </label>
-            <input
-              id="tracememo-address"
-              type="text"
-              value={address}
-              onChange={event => setAddress(event.target.value)}
-              readOnly={isEdit}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder={t('editor_address_placeholder')}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 read-only:opacity-60 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-            />
+            <div className="flex items-center gap-1.5">
+              <input
+                id="tracememo-address"
+                type="text"
+                value={address}
+                onChange={event => setAddress(event.target.value)}
+                readOnly={isEdit}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder={t('editor_address_placeholder')}
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-500 read-only:opacity-60 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+              />
+              {isEdit && (
+                <button
+                  type="button"
+                  onClick={() => void copy(address)}
+                  title={t('copy_address_label')}
+                  aria-label={t('copy_address_label')}
+                  className={`shrink-0 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] font-medium transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50 ${
+                    status === 'copied'
+                      ? 'text-emerald-300/90'
+                      : status === 'failed'
+                        ? 'text-rose-300/90'
+                        : 'text-slate-300'
+                  }`}>
+                  {status === 'copied' ? t('copy_copied') : status === 'failed' ? t('copy_failed') : t('copy')}
+                </button>
+              )}
+            </div>
             {isEdit && <p className="text-[11px] text-slate-500">{t('editor_address_readonly')}</p>}
           </div>
 
