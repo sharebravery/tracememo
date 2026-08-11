@@ -290,11 +290,21 @@ export const handleMessage = async (
       case 'SCAN_PAGE': {
         // Inject the content script into the target tab (activeTab covers
         // authorization for the current tab when the user clicked the toolbar).
-        await chrome.scripting.executeScript({
-          target: { tabId: message.payload.tabId },
-          files: ['content/all.iife.js'],
-        });
-        return { ok: true, data: { acknowledged: true as const } };
+        // Injection is expected to fail on pages where content scripts can't
+        // run (chrome://, web store, extension pages, etc.); report that as
+        // `injected: false` instead of an internal error so the UI can show a
+        // graceful empty state.
+        let injected = false;
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: message.payload.tabId },
+            files: ['content/all.iife.js'],
+          });
+          injected = true;
+        } catch {
+          // Restricted page - no scan, not an error.
+        }
+        return { ok: true, data: { acknowledged: true as const, injected } };
       }
 
       case 'TOGGLE_SITE_PERMISSION': {

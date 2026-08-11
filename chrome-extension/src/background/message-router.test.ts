@@ -1,5 +1,5 @@
 import { handleMessage } from './message-router.js';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RecordsRepository } from '@extension/research-db';
 import type {
   AddressKey,
@@ -13,6 +13,10 @@ import type { SettingsStorageType } from '@extension/storage';
 
 /** In-memory chrome.storage.session mock. */
 const sessionStore = new Map<string, unknown>();
+
+// Mutable so a test can force chrome.scripting.executeScript to fail
+// (simulating a restricted page like chrome://).
+let executeScriptImpl: (opts: { target: { tabId: number }; files: string[] }) => Promise<unknown> = async () => [];
 
 const mockChrome = {
   runtime: {
@@ -31,6 +35,9 @@ const mockChrome = {
         sessionStore.delete(key);
       },
     },
+  },
+  scripting: {
+    executeScript: async (opts: { target: { tabId: number }; files: string[] }) => executeScriptImpl(opts),
   },
 };
 
@@ -210,6 +217,33 @@ describe('OPEN_RECORD pending per tab', () => {
     const pending = sessionStore.get('tracememo-pending-record:1') as { key: AddressKey; chainId?: SupportedChainId };
     expect(pending.key).toBe(KEY);
     expect(pending.chainId).toBeUndefined();
+  });
+});
+
+describe('SCAN_PAGE injection', () => {
+  const originalImpl = executeScriptImpl;
+  afterEach(() => {
+    executeScriptImpl = originalImpl;
+  });
+
+  it('returns injected=true when the content script injects successfully', async () => {
+    executeScriptImpl = async () => [];
+    const res = await handleMessage({ type: 'SCAN_PAGE', payload: { tabId: 1 } }, deps, sidePanelSender());
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.data).toEqual({ acknowledged: true, injected: true });
+    }
+  });
+
+  it('returns injected=false (not an error) when the tab cannot be injected', async () => {
+    executeScriptImpl = async () => {
+      throw new Error('Cannot access a chrome:// URL');
+    };
+    const res = await handleMessage({ type: 'SCAN_PAGE', payload: { tabId: 1 } }, deps, sidePanelSender());
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.data).toEqual({ acknowledged: true, injected: false });
+    }
   });
 });
 

@@ -60,7 +60,7 @@ export interface ResponseMap {
   SETTINGS_GET: Settings;
   SETTINGS_UPDATE: Settings;
   OPEN_RECORD: { acknowledged: true };
-  SCAN_PAGE: { acknowledged: true };
+  SCAN_PAGE: { acknowledged: true; injected: boolean };
   TOGGLE_SITE_PERMISSION: { enabled: boolean };
   GET_ENABLED_SITES: string[];
 }

@@ -88,9 +88,14 @@ export const CurrentPageView = () => {
       // sites have a dynamically registered script.
       const pageCtx = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
       if (!pageCtx) {
-        await sendMessage({ type: 'SCAN_PAGE', payload: { tabId } });
-        // Wait briefly for the content script to scan and send PAGE_CONTEXT_SET.
-        await new Promise(r => setTimeout(r, 1500));
+        // Inject the scanner via activeTab. On pages where content scripts
+        // can't run (chrome://, web store, etc.) this returns injected=false -
+        // not an error, just no context to show.
+        const scan = await sendMessage({ type: 'SCAN_PAGE', payload: { tabId } });
+        if (scan.injected) {
+          // Wait briefly for the content script to scan and send PAGE_CONTEXT_SET.
+          await new Promise(r => setTimeout(r, 1500));
+        }
       }
       const ctx2 = await sendMessage({ type: 'PAGE_CONTEXT_GET', payload: { tabId } });
       setCtx(ctx2);
