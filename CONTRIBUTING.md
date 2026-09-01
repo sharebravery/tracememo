@@ -14,7 +14,8 @@ pnpm install          # Install dependencies
 pnpm dev              # Development watch build (dist/)
 pnpm lint             # ESLint checks
 pnpm type-check       # TypeScript type checking
-pnpm test             # Run test suite
+pnpm test             # Run unit and adapter test suite
+pnpm e2e              # Run WebdriverIO extension smoke test
 pnpm build            # Production build
 pnpm zip              # Build production ZIP package
 ```

@@ -488,7 +488,15 @@ Never include stack traces or user record content in production error messages.
 
 ### 8.2 Sender authorization
 
-Every message is schema-validated AND authorized by sender. `sender.id` must equal `chrome.runtime.id`. Content scripts (a real `sender.tab.id` and an allowed `sender.tab.url`) may only send `PAGE_CONTEXT_SET`, `RECORDS_GET_MANY`, and `OPEN_RECORD`. The side panel (`sender.url` under the extension's own side-panel URL) may send record CRUD, import/export, clear, settings, `PAGE_CONTEXT_GET`, and `RECORDS_GET_MANY`. Content scripts may not call `DATA_IMPORT`, `DATA_CLEAR`, `DATA_EXPORT`, or any write outside the current page. `PAGE_CONTEXT_SET` always uses `sender.tab.id`; client-supplied tab ids are ignored.
+Every message received by the background message router is schema-validated with Zod AND authorized based on sender identity and an explicit message allowlist:
+
+1. **Extension Identity Gate**: `sender.id` must strictly match `chrome.runtime.id`. Senders from other extensions or external contexts are rejected immediately with `FORBIDDEN`.
+2. **Content Script Boundary (`isContentSender`)**: Identified by matching `sender.id === chrome.runtime.id` and having a valid tab reference (`sender.tab?.id != null`). This covers any content script injected by TraceMemo — whether statically declared on built-in explorers, injected on demand via `activeTab` + `scripting` on generic pages, or injected via dynamically registered Always-scan scripts. Content scripts are strictly restricted to the `CONTENT_ALLOWED` allowlist:
+   - `PAGE_CONTEXT_SET`: records detected addresses for the sender's tab (the background always enforces `sender.tab.id` and ignores any client-supplied tab ID);
+   - `RECORDS_GET_MANY`: queries existing records for detected address keys;
+   - `OPEN_RECORD`: stages a pending record key in session storage for the tab.
+   Content scripts can **never** execute record CRUD, `DATA_IMPORT`, `DATA_CLEAR`, `DATA_EXPORT`, or settings mutations.
+3. **Side Panel Boundary (`isSidePanelSender`)**: Identified by matching extension ID and a sender URL within the extension's side panel (`sender.url.includes('/side-panel/')`). Only the side panel may perform library CRUD (`RECORD_CREATE`, `RECORD_UPDATE`, `RECORD_DELETE`, `RECORD_GET`, `RECORD_LIST`), data maintenance (`DATA_EXPORT`, `DATA_IMPORT`, `DATA_IMPORT_PREVIEW`, `DATA_CLEAR`), settings management (`SETTINGS_GET`, `SETTINGS_UPDATE`), and site permission management (`SCAN_PAGE`, `TOGGLE_SITE_PERMISSION`, `GET_ENABLED_SITES`).
 
 ### 8.1 Per-tab page context
 

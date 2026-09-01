@@ -59,7 +59,8 @@ To load unpacked in Chrome:
 ```bash
 pnpm lint             # ESLint checks
 pnpm type-check       # TypeScript type checking
-pnpm test             # Vitest unit, adapter, and smoke tests
+pnpm test             # Vitest unit and adapter tests
+pnpm e2e              # WebdriverIO extension smoke tests
 pnpm build            # Production build into dist/
 pnpm zip              # Package production ZIP into dist-zip/
 ```

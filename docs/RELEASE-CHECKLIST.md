@@ -4,10 +4,16 @@ Manual smoke testing checklist before tagging and publishing a release.
 
 ## 1. Build & Installation
 
-- [ ] Run fresh production build (`pnpm build && pnpm zip`).
-- [ ] Install production ZIP in Chrome (`chrome://extensions` -> Load unpacked / Drag & drop ZIP).
+- [ ] Run fresh production build and packaging (`pnpm build && pnpm zip`).
+- [ ] Verify packaging output in `dist-zip/*.zip`.
+- [ ] Test extension loading in Chrome (`chrome://extensions` with Developer mode enabled):
+  - **Option A (Production package verification)**: Extract the generated `dist-zip/*.zip` into a temporary folder, click **Load unpacked**, and select the extracted directory.
+  - **Option B (Local build smoke)**: Click **Load unpacked** and select the built `dist/` directory directly.
 - [ ] Verify toolbar icon click opens the side panel directly without errors.
 - [ ] Verify onboarding screen appears on first launch and dismissing it saves state.
+
+> **Note on Automated E2E vs Manual Smoke Testing**:
+> Automated E2E via WebdriverIO (`pnpm e2e`) depends on ChromeDriver and host Chrome version compatibility for extension inspection. When automated E2E cannot run in a local environment (e.g., ChromeDriver shadow DOM or headless extension discovery constraints on specific Chrome builds), the manual steps in this checklist serve as the authoritative verification.
 
 ## 2. Generic Page & Global Record
 
