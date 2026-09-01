@@ -29,12 +29,8 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
 
   const addSource = () => {
     const trimmedUrl = url.trim();
-    if (!trimmedUrl) {
-      setError(t('editor_sources'));
-      return;
-    }
-    if (!isValidHttpUrl(trimmedUrl)) {
-      setError(t('editor_sources'));
+    if (!trimmedUrl || !isValidHttpUrl(trimmedUrl)) {
+      setError(t('editor_source_invalid'));
       return;
     }
 
@@ -53,7 +49,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Sources</span>
+      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{t('editor_sources')}</span>
 
       {sources.length > 0 && (
         <ul className="flex flex-col gap-1">
@@ -65,7 +61,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
                 {source.title ? (
                   <p className="truncate text-xs font-medium text-slate-200">{source.title}</p>
                 ) : (
-                  <p className="text-[11px] italic text-slate-500">Untitled source</p>
+                  <p className="text-[11px] italic text-slate-500">{t('editor_untitled_source')}</p>
                 )}
                 <a
                   href={source.url}
@@ -79,7 +75,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
                 type="button"
                 onClick={() => removeSource(index)}
                 className="shrink-0 text-[11px] font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
-                Remove
+                {t('editor_remove')}
               </button>
             </li>
           ))}
@@ -91,7 +87,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
           type="url"
           value={url}
           onChange={event => setUrl(event.target.value)}
-          placeholder="https://example.com/source"
+          placeholder={t('editor_source_url_placeholder')}
           maxLength={SOURCE_URL_MAX}
           className="w-full rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
@@ -99,7 +95,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
           type="text"
           value={title}
           onChange={event => setTitle(event.target.value)}
-          placeholder="Source title (optional)"
+          placeholder={t('editor_source_title_placeholder')}
           maxLength={SOURCE_TITLE_MAX}
           className="w-full rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 focus:border-violet-500/60 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
         />
@@ -108,7 +104,7 @@ export const SourceList = ({ sources, onChange }: SourceListProps) => {
           type="button"
           onClick={addSource}
           className="self-start rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/50">
-          + Add source
+          {t('editor_add_source')}
         </button>
       </div>
     </div>

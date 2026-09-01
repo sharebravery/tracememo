@@ -1,11 +1,22 @@
 import { handleMessage } from './message-router.js';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RecordsRepository } from '@extension/research-db';
-import type { AddressKey, AddressRecord, PageContextInput, ResponseMessage, SupportedChainId } from '@extension/shared';
+import type {
+  AddressKey,
+  AddressRecord,
+  EvmAddress,
+  PageContextInput,
+  ResponseMessage,
+  SupportedChainId,
+} from '@extension/shared';
 import type { SettingsStorageType } from '@extension/storage';
 
 /** In-memory chrome.storage.session mock. */
 const sessionStore = new Map<string, unknown>();
+
+// Mutable so a test can force chrome.scripting.executeScript to fail
+// (simulating a restricted page like chrome://).
+let executeScriptImpl: (opts: { target: { tabId: number }; files: string[] }) => Promise<unknown> = async () => [];
 
 const mockChrome = {
   runtime: {
@@ -24,6 +35,9 @@ const mockChrome = {
         sessionStore.delete(key);
       },
     },
+  },
+  scripting: {
+    executeScript: async (opts: { target: { tabId: number }; files: string[] }) => executeScriptImpl(opts),
   },
 };
 
@@ -146,12 +160,17 @@ describe('message sender authorization', () => {
     }
   });
 
-  it('forbids content scripts on unsupported pages', async () => {
+  it('allows PAGE_CONTEXT_SET from a generic-page content script', async () => {
     const res = await handleMessage(
       { type: 'PAGE_CONTEXT_SET', payload: pageContext() },
       deps,
       contentSender(1, 'https://example.com/x'),
     );
+    expect(res.ok).toBe(true);
+  });
+
+  it('forbids DATA_CLEAR from a generic-page content script', async () => {
+    const res = await handleMessage({ type: 'DATA_CLEAR' }, deps, contentSender(1, 'https://example.com/x'));
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.error.code).toBe('FORBIDDEN');
@@ -186,6 +205,45 @@ describe('OPEN_RECORD pending per tab', () => {
     );
     expect(sessionStore.get('tracememo-pending-record:1')).toMatchObject({ key: KEY, chainId: 1 });
     expect(sessionStore.get('tracememo-pending-record:2')).toMatchObject({ key: KEY, chainId: 8453 });
+  });
+
+  it('stores pending with undefined chainId when none is provided (generic page)', async () => {
+    const KEY = ('evm:0x' + 'a'.repeat(40)) as AddressKey;
+    await handleMessage(
+      { type: 'OPEN_RECORD', payload: { key: KEY } },
+      deps,
+      contentSender(1, 'https://example.com/x'),
+    );
+    const pending = sessionStore.get('tracememo-pending-record:1') as { key: AddressKey; chainId?: SupportedChainId };
+    expect(pending.key).toBe(KEY);
+    expect(pending.chainId).toBeUndefined();
+  });
+});
+
+describe('SCAN_PAGE injection', () => {
+  const originalImpl = executeScriptImpl;
+  afterEach(() => {
+    executeScriptImpl = originalImpl;
+  });
+
+  it('returns injected=true when the content script injects successfully', async () => {
+    executeScriptImpl = async () => [];
+    const res = await handleMessage({ type: 'SCAN_PAGE', payload: { tabId: 1 } }, deps, sidePanelSender());
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.data).toEqual({ acknowledged: true, injected: true });
+    }
+  });
+
+  it('returns injected=false (not an error) when the tab cannot be injected', async () => {
+    executeScriptImpl = async () => {
+      throw new Error('Cannot access a chrome:// URL');
+    };
+    const res = await handleMessage({ type: 'SCAN_PAGE', payload: { tabId: 1 } }, deps, sidePanelSender());
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.data).toEqual({ acknowledged: true, injected: false });
+    }
   });
 });
 
@@ -233,5 +291,63 @@ describe('RECORD_CREATE does not overwrite', () => {
       sidePanelSender(),
     );
     expect(res.ok).toBe(true);
+  });
+});
+
+describe('RECORD_UPDATE chain context handling', () => {
+  const KEY = ('evm:0x' + 'a'.repeat(40)) as AddressKey;
+  const ADDR = ('0x' + 'Aa'.repeat(20)) as EvmAddress;
+
+  const existingGlobalOnly = (): AddressRecord => ({
+    key: KEY,
+    address: ADDR,
+    label: 'Old',
+    tags: [],
+    note: '',
+    chains: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('updates global fields only and creates no chain context when chainId is absent', async () => {
+    let upserted: AddressRecord | undefined;
+    const mockRepo = {
+      get: async () => existingGlobalOnly(),
+      upsert: async (record: AddressRecord) => {
+        upserted = record;
+        return record;
+      },
+    } as unknown as RecordsRepository;
+    const res = await handleMessage(
+      { type: 'RECORD_UPDATE', payload: { key: KEY, label: 'New', tags: ['t'], note: 'n' } },
+      { repo: mockRepo, settings: {} as SettingsStorageType },
+      sidePanelSender(),
+    );
+    expect(res.ok).toBe(true);
+    expect(upserted?.label).toBe('New');
+    expect(upserted?.chains).toEqual([]); // no Ethereum context fabricated
+  });
+
+  it('upserts one chain context when chainId is provided', async () => {
+    let upserted: AddressRecord | undefined;
+    const mockRepo = {
+      get: async () => existingGlobalOnly(),
+      upsert: async (record: AddressRecord) => {
+        upserted = record;
+        return record;
+      },
+    } as unknown as RecordsRepository;
+    const res = await handleMessage(
+      {
+        type: 'RECORD_UPDATE',
+        payload: { key: KEY, chainId: 137, label: 'New', chainNote: 'pn', confidence: 'likely', sources: [] },
+      },
+      { repo: mockRepo, settings: {} as SettingsStorageType },
+      sidePanelSender(),
+    );
+    expect(res.ok).toBe(true);
+    expect(upserted?.chains).toHaveLength(1);
+    expect(upserted?.chains[0].chainId).toBe(137);
+    expect(upserted?.chains[0].confidence).toBe('likely');
   });
 });

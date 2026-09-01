@@ -5,7 +5,7 @@ import type { AddressKey, AddressRecord, EvmAddress, SupportedChainId } from '@e
 interface DetectedAccount {
   key: AddressKey;
   address: EvmAddress;
-  chainId: SupportedChainId;
+  chainId: SupportedChainId | undefined;
   record?: AddressRecord;
   isPrimary: boolean;
 }

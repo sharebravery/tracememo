@@ -59,9 +59,10 @@ const render = (): void => {
       chainId,
       hasRecord: key => recordMap.get(key),
       onOpen: key => {
-        if (chainId) {
-          void sendMessage({ type: 'OPEN_RECORD', payload: { key, chainId } }).catch(() => {});
-        }
+        // Generic pages have no chainId - open the global record anyway.
+        void sendMessage(
+          chainId ? { type: 'OPEN_RECORD', payload: { key, chainId } } : { type: 'OPEN_RECORD', payload: { key } },
+        ).catch(() => {});
       },
     });
     adapterErrors = 0;

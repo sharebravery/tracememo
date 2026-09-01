@@ -122,16 +122,18 @@ export const recordCreateInputSchema = z.object({
   sources: sourcesInputArraySchema.optional().default([]),
 });
 
-/** Update DTO: global fields + upsert one chain context (by chainId). */
+/** Update DTO: global fields + optional upsert of one chain context (by chainId).
+ * When `chainId` is absent, only global fields are updated and no chain context
+ * is created. */
 export const recordUpdateInputSchema = z.object({
   key: addressKeySchema,
-  chainId: chainIdSchema,
+  chainId: chainIdSchema.optional(),
   label: z.string().min(1).max(LABEL_MAX),
   tags: tagsSchema.default([]),
   note: z.string().max(NOTE_MAX).default(''),
-  chainNote: z.string().max(NOTE_MAX).default(''),
-  confidence: confidenceSchema,
-  sources: sourcesInputArraySchema.default([]),
+  chainNote: z.string().max(NOTE_MAX).optional(),
+  confidence: confidenceSchema.optional(),
+  sources: sourcesInputArraySchema.optional().default([]),
 });
 
 /** Strict export envelope; every record must be valid (all-or-nothing import).
@@ -179,7 +181,10 @@ export const requestMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('DATA_CLEAR') }),
   z.object({ type: z.literal('SETTINGS_GET') }),
   z.object({ type: z.literal('SETTINGS_UPDATE'), payload: settingsSchema.partial() }),
-  z.object({ type: z.literal('OPEN_RECORD'), payload: z.object({ key: addressKeySchema, chainId: chainIdSchema }) }),
+  z.object({
+    type: z.literal('OPEN_RECORD'),
+    payload: z.object({ key: addressKeySchema, chainId: chainIdSchema.optional() }),
+  }),
   z.object({ type: z.literal('SCAN_PAGE'), payload: z.object({ tabId: z.number().int().nonnegative() }) }),
   z.object({
     type: z.literal('TOGGLE_SITE_PERMISSION'),

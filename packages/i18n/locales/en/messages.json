@@ -1,7 +1,7 @@
 {
   "extensionDescription": {
     "description": "Extension description shown in the Chrome extensions list",
-    "message": "Private context for every onchain address. Attach a label, note, confidence, and source to EVM addresses on Etherscan, BaseScan, PolygonScan and BscScan."
+    "message": "Private context for every onchain address. Attach a label, note, confidence, and sources to EVM addresses on any web page."
   },
   "extensionName": {
     "description": "Extension name",
@@ -26,7 +26,7 @@
   "current_page_no_addresses": { "message": "No addresses detected" },
   "current_page_no_match": { "message": "No addresses match your search." },
   "current_page_no_detected": {
-    "message": "No supported EVM addresses detected on this page. Open an Etherscan, BaseScan, PolygonScan or BscScan page."
+    "message": "No supported EVM addresses detected on this page."
   },
   "current_page_show_more": {
     "description": "$1=remaining count",
@@ -41,20 +41,27 @@
     "description": "$1=comma-separated chain names",
     "message": "Also on $1"
   },
+  "current_page_always_scan": { "message": "Always scan this site" },
+  "current_page_global_only": { "message": "Global only" },
+  "current_page_global_record": { "message": "Global record" },
+  "current_page_not_saved": { "message": "Not saved" },
+  "current_page_add_chain_context": { "message": "Add chain context" },
+  "current_page_add_x_context": {
+    "description": "$1=chain name",
+    "message": "Add $1 context"
+  },
   "current_page_save": { "message": "Save" },
   "current_page_edit": { "message": "Edit" },
-  "current_page_enable_site": { "message": "Always enable on this site" },
-  "current_page_disable_site": { "message": "Disable on this site" },
-  "current_page_site_enabled": { "message": "Enabled on this site" },
-  "current_page_unknown_network": { "message": "Unknown network" },
   "library_title": { "message": "Library" },
   "library_new_record": { "message": "+ New Record" },
+  "library_new_record_short": { "message": "New Record" },
   "library_search_placeholder": { "message": "Label, address, note, tag" },
   "library_search_label": { "message": "Search" },
   "library_confidence": { "message": "Confidence" },
   "library_all_confidence": { "message": "All confidence" },
   "library_empty": { "message": "No saved addresses yet. Add your first record to start building context." },
   "library_no_match": { "message": "No records match your search." },
+  "library_loading": { "message": "Loading records…" },
   "library_edit": { "message": "Edit" },
   "library_delete": { "message": "Delete" },
   "library_confirm_delete": { "message": "Confirm delete" },
@@ -64,13 +71,18 @@
   "editor_back": { "message": "Back" },
   "editor_address": { "message": "Address" },
   "editor_address_readonly": { "message": "One global record per address; the address cannot change." },
+  "editor_address_placeholder": { "message": "0x…" },
   "editor_label": { "message": "Label" },
+  "editor_label_placeholder": { "message": "Short label for this address" },
   "editor_tags": { "message": "Tags (comma-separated)" },
   "editor_tags_hint": { "message": "Up to $1 tags." },
+  "editor_tags_placeholder": { "message": "wallet, exchange, suspicious" },
+  "editor_global_section": { "message": "Global" },
   "editor_global_note": { "message": "Global note" },
   "editor_global_note_placeholder": { "message": "Applies to this address on every chain" },
-  "editor_shared_section": { "message": "Shared across chains" },
-  "editor_chain_section": { "message": "Per-chain context" },
+  "editor_chain_section": { "message": "Chain context" },
+  "editor_add_chain_context": { "message": "Add chain context" },
+  "editor_choose_chain": { "message": "Choose a chain" },
   "editor_chain_note": { "message": "Chain note" },
   "editor_chain_note_placeholder": {
     "description": "$1=chain name",
@@ -79,6 +91,9 @@
   "editor_chain_hint": { "message": "Note, confidence, and sources are per chain." },
   "editor_sources": { "message": "Sources" },
   "editor_add_source": { "message": "+ Add source" },
+  "editor_source_url_placeholder": { "message": "https://example.com/source" },
+  "editor_source_title_placeholder": { "message": "Source title (optional)" },
+  "editor_source_invalid": { "message": "Enter a valid http(s) source URL." },
   "editor_remove": { "message": "Remove" },
   "editor_untitled_source": { "message": "Untitled source" },
   "editor_save": { "message": "Save record" },
@@ -97,8 +112,11 @@
     "message": "Show private labels on $1"
   },
   "settings_annotations_off": {
-    "message": "When off, TraceMemo stops annotating addresses on explorer pages. Your saved records are kept."
+    "message": "When off, TraceMemo stops annotating addresses. Your saved records are kept."
   },
+  "settings_enabled_sites_title": { "message": "Always-scan sites" },
+  "settings_enabled_sites_empty": { "message": "No sites enabled." },
+  "settings_enabled_sites_remove": { "message": "Remove" },
   "settings_privacy_title": { "message": "Privacy & permissions" },
   "settings_privacy_local": { "message": "Records stay on this device only." },
   "settings_privacy_reads": {
@@ -109,10 +127,10 @@
   "settings_privacy_no_analytics": { "message": "No analytics or external data transmission." },
   "onboarding_welcome": { "message": "Welcome to TraceMemo" },
   "onboarding_intro": {
-    "message": "TraceMemo is a local-first research notebook for EVM addresses on Etherscan, BaseScan, PolygonScan and BscScan."
+    "message": "TraceMemo is a local-first research notebook for EVM addresses. It recognizes addresses on any web page and attaches your private labels, notes, and sources."
   },
   "onboarding_b1": { "message": "Records stay on this device only - no account, no cloud sync." },
-  "onboarding_b2": { "message": "Reads explorer pages to find addresses and show your private labels." },
+  "onboarding_b2": { "message": "Reads web pages to find addresses and show your private labels." },
   "onboarding_b3": { "message": "Never connects a wallet, requests signatures, sends transactions, or calls RPC." },
   "onboarding_b4": { "message": "No analytics and no external data transmission." },
   "onboarding_b5": { "message": "Export or delete all data anytime from Settings." },
@@ -155,6 +173,7 @@
   "state_error_retry": { "message": "Try again" },
   "copy_copied": { "message": "Copied" },
   "copy_failed": { "message": "Copy failed" },
+  "copy": { "message": "Copy" },
   "copy_address_label": { "message": "Copy address" },
   "badge_private": { "message": "private" },
   "badge_no_context": {

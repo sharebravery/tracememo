@@ -15,7 +15,8 @@ export const SITES: readonly ExplorerSite[] = SUPPORTED_CHAINS.map(c => ({
 
 /**
  * Resolve network context from the page URL. Returns null for non-explorer
- * pages. Never guesses the chain from page content.
+ * pages (generic pages carry a global record only). Never guesses the chain
+ * from page content. Derived entirely from `SUPPORTED_CHAINS`.
  */
 export const resolveNetworkContext = (hostname: string): NetworkContext | null => {
   for (const site of SITES) {
@@ -24,10 +25,4 @@ export const resolveNetworkContext = (hostname: string): NetworkContext | null =
     }
   }
   return null;
-};
-
-export const detectSite = (hostname: string): ExplorerSite | null => {
-  const ctx = resolveNetworkContext(hostname);
-  if (!ctx) return null;
-  return SITES.find(s => s.id === ctx.site) ?? null;
 };

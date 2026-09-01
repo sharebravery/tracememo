@@ -1,7 +1,8 @@
 import 'webextension-polyfill';
 import { handleMessage } from './message-router';
+import { reconcileSitePermissions } from './site-permissions';
 import { createRecordsRepository, getDatabase } from '@extension/research-db';
-import { pageContextStorageKey, SUPPORTED_CHAINS } from '@extension/shared';
+import { pageContextStorageKey } from '@extension/shared';
 import { settingsStorage } from '@extension/storage';
 
 /**
@@ -23,11 +24,11 @@ const routerDeps = {
   settings: settingsStorage,
 };
 
-const isSupportedExplorerUrl = (url: string | undefined): boolean =>
-  Boolean(url && SUPPORTED_CHAINS.some(c => url.startsWith(`https://${c.hostname}/`)));
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === 'OPEN_RECORD' && sender.tab?.id != null && isSupportedExplorerUrl(sender.tab.url)) {
+  // Open the side panel on annotation click from any content script - explorer
+  // pages (static content script), generic pages (activeTab/scripting), and
+  // always-scan sites (dynamically registered script) alike.
+  if (message?.type === 'OPEN_RECORD' && sender.id === chrome.runtime.id && sender.tab?.id != null) {
     chrome.sidePanel?.open?.({ tabId: sender.tab.id }).catch(() => {});
   }
   handleMessage(message, routerDeps, sender).then(sendResponse);
@@ -38,5 +39,12 @@ chrome.tabs.onRemoved.addListener(tabId => {
   void chrome.storage.session.remove(pageContextStorageKey(tabId));
 });
 
+// Reconcile always-scan dynamic scripts: fix drift on startup and after
+// install/update (permissions revoked externally or scripts cleared).
+chrome.runtime.onInstalled.addListener(() => {
+  void reconcileSitePermissions();
+});
+
+void reconcileSitePermissions();
 void configureSidePanel();
 console.log('[TraceMemo] background service worker started');

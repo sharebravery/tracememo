@@ -9,11 +9,17 @@ const chainNames = SUPPORTED_CHAINS.map(c => c.label).join(', ');
 
 export const SettingsView = () => {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [enabledSites, setEnabledSites] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
-      setSettings(await sendMessage({ type: 'SETTINGS_GET' }));
+      const [s, sites] = await Promise.all([
+        sendMessage({ type: 'SETTINGS_GET' }),
+        sendMessage({ type: 'GET_ENABLED_SITES' }),
+      ]);
+      setSettings(s);
+      setEnabledSites(sites);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t('msg_error_load_settings'));
@@ -28,6 +34,15 @@ export const SettingsView = () => {
     try {
       setSettings(await sendMessage({ type: 'SETTINGS_UPDATE', payload: { annotationsEnabled: enabled } }));
       setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('msg_error_update_settings'));
+    }
+  };
+
+  const removeSite = async (origin: string) => {
+    try {
+      await sendMessage({ type: 'TOGGLE_SITE_PERMISSION', payload: { origin, enable: false } });
+      setEnabledSites(await sendMessage({ type: 'GET_ENABLED_SITES' }));
     } catch (e) {
       setError(e instanceof Error ? e.message : t('msg_error_update_settings'));
     }
@@ -62,6 +77,29 @@ export const SettingsView = () => {
           </span>
           <p className="mt-0.5 text-xs text-slate-400">{t('settings_annotations_off')}</p>
         </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-sm">
+        <h3 className="mb-1.5 text-xs font-semibold text-slate-200">{t('settings_enabled_sites_title')}</h3>
+        {enabledSites === null ? (
+          <p className="text-xs text-slate-500">{t('state_loading')}</p>
+        ) : enabledSites.length === 0 ? (
+          <p className="text-xs text-slate-500">{t('settings_enabled_sites_empty')}</p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {enabledSites.map(origin => (
+              <li key={origin} className="flex items-center justify-between gap-2">
+                <span className="truncate font-mono text-[11px] text-slate-400">{origin}</span>
+                <button
+                  type="button"
+                  onClick={() => void removeSite(origin)}
+                  className="shrink-0 text-[11px] font-medium text-rose-400 transition hover:text-rose-300 focus:outline-none focus-visible:underline">
+                  {t('settings_enabled_sites_remove')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {error && (

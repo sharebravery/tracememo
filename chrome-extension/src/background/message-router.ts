@@ -1,3 +1,4 @@
+import { disableSite, enableSite, listEnabledSites } from './site-permissions';
 import {
   ErrorCode,
   requestMessageSchema,
@@ -5,7 +6,6 @@ import {
   toChecksumAddress,
   pageContextStorageKey,
   pendingRecordStorageKey,
-  SUPPORTED_CHAINS,
 } from '@extension/shared';
 import type { RecordsRepository } from '@extension/research-db';
 import type {
@@ -56,11 +56,13 @@ const SIDE_PANEL_ALLOWED = new Set<RequestMessage['type']>([
   'GET_ENABLED_SITES',
 ]);
 
-const isSupportedExplorerUrl = (url: string | undefined): boolean =>
-  Boolean(url && SUPPORTED_CHAINS.some(c => url.startsWith(`https://${c.hostname}/`)));
-
 const isContentSender = (sender: chrome.runtime.MessageSender): boolean =>
-  sender.id === chrome.runtime.id && sender.tab?.id != null && isSupportedExplorerUrl(sender.tab.url);
+  // Any content script injected by this extension (static match on explorers,
+  // activeTab/scripting on a generic page, or a dynamically registered
+  // always-scan script) is trusted to send the read-only content messages.
+  // `chrome.runtime.onMessage` only receives messages from our own extension
+  // contexts, and CONTENT_ALLOWED is read-only, so CRUD stays forbidden.
+  sender.id === chrome.runtime.id && sender.tab?.id != null;
 
 const isSidePanelSender = (sender: chrome.runtime.MessageSender): boolean => {
   if (sender.id !== chrome.runtime.id) return false;
@@ -69,8 +71,11 @@ const isSidePanelSender = (sender: chrome.runtime.MessageSender): boolean => {
 };
 
 const authorize = (type: RequestMessage['type'], sender: chrome.runtime.MessageSender): boolean => {
-  if (isContentSender(sender)) return CONTENT_ALLOWED.has(type);
+  // Check the side panel first: a side-panel page opened as a tab still has
+  // sender.tab set, but its url is the extension side-panel URL (content
+  // scripts never run on extension pages, so the URL is a strong signal).
   if (isSidePanelSender(sender)) return SIDE_PANEL_ALLOWED.has(type);
+  if (isContentSender(sender)) return CONTENT_ALLOWED.has(type);
   return false;
 };
 
@@ -144,20 +149,28 @@ const updateRecord = async (input: RecordUpdateInput, repo: RecordsRepository): 
     throw new RouterError(ErrorCode.NOT_FOUND, 'Record not found');
   }
   const now = new Date().toISOString();
-  const existingChainIndex = existing.chains.findIndex(c => c.chainId === input.chainId);
-  const existingChain = existingChainIndex >= 0 ? existing.chains[existingChainIndex] : undefined;
-  const upsertedChain: ChainContext = {
-    chainId: input.chainId,
-    note: input.chainNote,
-    confidence: input.confidence,
-    sources: buildSources(input.sources, now),
-    createdAt: existingChain?.createdAt ?? now,
-    updatedAt: now,
-  };
-  const chains =
-    existingChainIndex >= 0
-      ? existing.chains.map((c, i) => (i === existingChainIndex ? upsertedChain : c))
-      : [...existing.chains, upsertedChain];
+  // Only upsert a chain context when the caller provided a chainId. Without
+  // one, a global-only edit must NOT fabricate an Ethereum (or any) context.
+  let chains = existing.chains;
+  if (input.chainId) {
+    const chainNote = input.chainNote ?? '';
+    const confidence = input.confidence ?? 'unverified';
+    const sources = buildSources(input.sources ?? [], now);
+    const existingChainIndex = existing.chains.findIndex(c => c.chainId === input.chainId);
+    const existingChain = existingChainIndex >= 0 ? existing.chains[existingChainIndex] : undefined;
+    const upsertedChain: ChainContext = {
+      chainId: input.chainId,
+      note: chainNote,
+      confidence,
+      sources,
+      createdAt: existingChain?.createdAt ?? now,
+      updatedAt: now,
+    };
+    chains =
+      existingChainIndex >= 0
+        ? existing.chains.map((c, i) => (i === existingChainIndex ? upsertedChain : c))
+        : [...existing.chains, upsertedChain];
+  }
 
   const record: AddressRecord = {
     ...existing,
@@ -277,37 +290,38 @@ export const handleMessage = async (
       case 'SCAN_PAGE': {
         // Inject the content script into the target tab (activeTab covers
         // authorization for the current tab when the user clicked the toolbar).
-        await chrome.scripting.executeScript({
-          target: { tabId: message.payload.tabId },
-          files: ['content/all.iife.js'],
-        });
-        return { ok: true, data: { acknowledged: true as const } };
+        // Injection is expected to fail on pages where content scripts can't
+        // run (chrome://, web store, extension pages, etc.); report that as
+        // `injected: false` instead of an internal error so the UI can show a
+        // graceful empty state.
+        let injected = false;
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: message.payload.tabId },
+            files: ['content/all.iife.js'],
+          });
+          injected = true;
+        } catch {
+          // Restricted page - no scan, not an error.
+        }
+        return { ok: true, data: { acknowledged: true as const, injected } };
       }
 
       case 'TOGGLE_SITE_PERMISSION': {
         const { origin, enable } = message.payload;
+        // The host permission is requested by the side panel (where the user
+        // gesture lives); this branch only registers/unregisters the dynamic
+        // content script and tracks the origin.
         if (enable) {
-          const granted = await chrome.permissions.request({ origins: [`${origin}/*`] });
-          if (!granted) {
-            throw new RouterError(ErrorCode.FORBIDDEN, 'Permission not granted');
-          }
-          const data = await chrome.storage.local.get('tracememo-enabled-sites');
-          const sites = new Set((data['tracememo-enabled-sites'] as string[]) ?? []);
-          sites.add(origin);
-          await chrome.storage.local.set({ 'tracememo-enabled-sites': [...sites] });
+          await enableSite(origin);
         } else {
-          await chrome.permissions.remove({ origins: [`${origin}/*`] });
-          const data = await chrome.storage.local.get('tracememo-enabled-sites');
-          const sites = new Set((data['tracememo-enabled-sites'] as string[]) ?? []);
-          sites.delete(origin);
-          await chrome.storage.local.set({ 'tracememo-enabled-sites': [...sites] });
+          await disableSite(origin);
         }
         return { ok: true, data: { enabled: enable } };
       }
 
       case 'GET_ENABLED_SITES': {
-        const data = await chrome.storage.local.get('tracememo-enabled-sites');
-        return { ok: true, data: (data['tracememo-enabled-sites'] as string[]) ?? [] };
+        return { ok: true, data: await listEnabledSites() };
       }
 
       default: {

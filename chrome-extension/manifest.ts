@@ -1,3 +1,4 @@
+import { SUPPORTED_CHAINS } from '@extension/shared';
 import { readFileSync } from 'node:fs';
 import type { ManifestType } from '@extension/shared';
 
@@ -9,16 +10,16 @@ const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
  * Minimum-permission Manifest V3 surface:
  * - one background service worker;
  * - a side panel as the sole UI (toolbar click opens it directly);
- * - one content script scoped to the supported explorers only;
- * - `storage` and `sidePanel` permissions only.
+ * - one static content script scoped to the supported explorers only (generic
+ *   pages are scanned on demand via activeTab/scripting, or always-on via a
+ *   dynamically registered content script per enabled site - see background
+ *   site-permissions);
+ * - `storage`, `sidePanel`, `activeTab`, and `scripting` permissions only.
+ *
+ * Host lists are derived from the single chain-config source
+ * (`SUPPORTED_CHAINS`) so the manifest can never drift from the chain registry.
  */
-const SUPPORTED_HOSTS = [
-  'https://etherscan.io/*',
-  'https://basescan.org/*',
-  'https://polygonscan.com/*',
-  'https://bscscan.com/*',
-  'https://arbiscan.io/*',
-] as const;
+const SUPPORTED_HOSTS = SUPPORTED_CHAINS.map(c => `https://${c.hostname}/*`) as readonly string[];
 
 const manifest = {
   manifest_version: 3,
