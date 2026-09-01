@@ -17,12 +17,12 @@
 
 ### 1.3 Core user outcome
 
-A user sees an unfamiliar EVM address on Etherscan or BaseScan, saves:
+A user sees an unfamiliar EVM address on a block explorer or web page, saves:
 
 - a short label;
-- a note;
-- a confidence level;
-- one or more source links.
+- tags;
+- a global note;
+- chain context (chain note, confidence level, source links) when applicable.
 
 When the same address appears again, TraceMemo shows the saved label and makes the supporting context available without forcing the user to search through spreadsheets or notes.
 
@@ -35,7 +35,7 @@ Therefore, TraceMemo must not compete as “another address replacer.” Its wed
 1. **Evidence-backed notes** — every attribution can retain its source.
 2. **Confidence-aware research** — confirmed and speculative claims are visibly different.
 3. **Local-first ownership** — no account or cloud is required for the core workflow.
-4. **Consistent workflow across supported explorers** - one global record per EVM address (shared label, tags, and global note) holds independent per-chain contexts (chain-level note, confidence, sources). The same address on Ethereum Mainnet and Base shares the global label but NOT the chain-level note, confidence, or sources. The same address is not assumed to have the same contract code, purpose, or state across chains.
+4. **Consistent workflow across supported explorers and the web** - one global record per EVM address (shared label, tags, and global note) holds independent per-chain contexts (chain-level note, confidence, sources). The same address on different explorers shares the global label but NOT the chain-level note, confidence, or sources. The same address is not assumed to have the same contract code, purpose, or state across chains.
 5. **Portable data** — the user can export and re-import the full research library.
 
 ### 2.1 Positioning statement
@@ -96,16 +96,23 @@ The MVP is not for users seeking:
 
 ### 5.2 Supported sites
 
-- `https://etherscan.io/*`
-- `https://basescan.org/*`
+1. **Built-in block explorers** (automatic detection and chain-specific context):
+   - `https://etherscan.io/*` (Ethereum Mainnet, chain id 1)
+   - `https://basescan.org/*` (Base, chain id 8453)
+   - `https://polygonscan.com/*` (Polygon, chain id 137)
+   - `https://bscscan.com/*` (BNB Smart Chain, chain id 56)
+   - `https://arbiscan.io/*` (Arbitrum One, chain id 42161)
 
-Both are implemented through one Etherscan-family adapter with site configuration. Etherscan corresponds to Ethereum Mainnet (chain id 1); BaseScan corresponds to Base (chain id 8453).
+2. **Generic web pages**:
+   - On-demand scanning triggered by user clicking the extension toolbar icon (`activeTab` + `scripting`).
+   - "Always scan this site" opt-in for specific domains (requests host permission for that origin only).
+   - Generic pages identify EVM addresses and display Global Records without guessing a chain context.
 
 ### 5.3 Supported identifier
 
 - valid 20-byte EVM address in `0x` hexadecimal form;
 - normalized to checksum format for display;
-- canonical lookup key is `evm:<lowercase address>` - one global record per address. The chain id is NOT part of the key; each record holds per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label/tags/note but NOT the chain-level note, confidence, or sources;
+- canonical lookup key is `evm:<lowercase address>` - one global record per address. The chain id is NOT part of the global key; each record holds per-chain contexts (chainId, chain-level note, confidence, sources). The same address on different explorers shares the global label/tags/note while maintaining independent per-chain context;
 
 MVP does not support ENS, transaction hashes, Solana addresses, Bitcoin addresses, or other chain-specific identifiers.
 

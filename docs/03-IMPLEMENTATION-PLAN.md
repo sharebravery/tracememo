@@ -5,18 +5,16 @@
 
 ## Global rule
 
-Records are one global entry per EVM address: the canonical key is `evm:<lowercase address>` and holds a shared label/tags/note plus independent per-chain contexts (chainId, chain-level note, confidence, sources). The same address on Ethereum Mainnet (1) and Base (8453) shares the global label but NOT the chain-level note, confidence, or sources. Page context is isolated per Chrome tab. The side panel defaults to the Current Page view. The content script extracts a primary address from `/address/0x...` paths and sorts it first; `/tx/` hashes are never treated as addresses.
+Records are one global entry per EVM address: the canonical key is `evm:<lowercase address>` and holds a shared label/tags/note plus independent per-chain contexts (chainId, chain-level note, confidence, sources). The same address across supported chains shares the global label but NOT the chain-level note, confidence, or sources. Page context is isolated per Chrome tab. The side panel defaults to the Current Page view. The content script extracts a primary address from `/address/0x...` paths and sorts it first; `/tx/` hashes are never treated as addresses.
 
-The canonical command set (used by CI and every milestone's acceptance) is: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm build`, and `pnpm zip`. Do not introduce conflicting commands or version pins.
+The canonical command set (used by CI and release validation) is: `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm build`, and `pnpm zip`. Do not introduce conflicting commands or version pins.
 
-Before every milestone:
+Development guidance:
 
-1. read the PRD sections relevant to the milestone;
-2. read the matching architecture sections;
-3. list the exact acceptance criteria;
-4. implement only that milestone;
-5. run the required checks;
-6. report gaps before moving forward.
+1. Review PRD and architecture sections relevant to each milestone;
+2. Verify milestone acceptance criteria;
+3. Keep changes minimal, scoped, and well-tested;
+4. Run all verification checks (`lint`, `type-check`, `test`, `build`, `zip`) before merging.
 
 ## Milestone 1 — Template baseline
 
@@ -238,18 +236,4 @@ Create a new PRD before implementing any of these:
 - AI attribution;
 - wallet connection;
 - additional address formats.
-
-## Coding-agent prompt
-
-Use this at the beginning of each milestone task:
-
-```text
-Read README.md, 01-PRD.md, 02-TECHNICAL-ARCHITECTURE.md, and 03-IMPLEMENTATION-PLAN.md.
-Implement only Milestone N and its acceptance criteria.
-Use the pinned chrome-extension-boilerplate-react-vite structure and the Node.js/pnpm versions already installed locally.
-Do not add WXT, Radix, Radix Themes, another UI framework, a backend, wallet integration, RPC calls, analytics, <all_urls>, remote JavaScript, cloud sync, billing, or features from later milestones.
-Keep the background service worker as the only record CRUD boundary.
-Add tests for every changed domain rule or page-adapter behavior.
-End with scope, files changed, commands/results, acceptance status, permission changes, limitations, and the next smallest task.
-```
 

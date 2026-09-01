@@ -1,44 +1,39 @@
 # TraceMemo Chrome Web Store Listing
 
-## Short name
+## Short Name
 
 TraceMemo
 
-## Summary (132 chars max)
+## Summary (132 characters max)
 
-Private, chain-aware context for onchain addresses. Attach a label, note, confidence, and sources to EVM addresses on Etherscan, BaseScan, PolygonScan, BscScan and Arbiscan.
+Private, local-first context for EVM addresses. Attach labels, notes, confidence, and sources across block explorers and the web.
 
-## Detailed description
+## Detailed Description
 
-TraceMemo is a local-first research notebook for Web3 researchers. When you see an EVM address on Etherscan or BaseScan, save a short label, a note, a confidence level, and one or more source links. The next time that address appears on the same chain, TraceMemo shows your private label beside it - no spreadsheets or separate notes required.
+TraceMemo is a local-first research notebook for Web3 researchers and blockchain analysts. When you encounter an EVM address on a block explorer or webpage, save a private label, tags, a global note, and chain-specific context (chain note, confidence level, and source links). When that address appears again, TraceMemo displays your private label right beside it — no spreadsheets or separate notes required.
 
-Records are one global entry per EVM address: a shared label, tags, and global note, plus independent per-chain contexts (chain-level note, confidence, sources) for Ethereum Mainnet (chain id 1) and Base (chain id 8453). The shared label appears on both chains; the chain-level note, confidence, and sources are independent and are not copied across chains. The same address is not assumed to have the same contract code, purpose, or state across chains.
+### Key Features
 
-What makes TraceMemo different from a simple address replacer:
+- **Single Global Record per Address**: Save a unified label, tags, and global note that follow the address across the web.
+- **Independent Chain Contexts**: Add chain-specific notes, confidence, and source links on supported block explorers (Ethereum Mainnet, Base, Polygon, BNB Smart Chain, Arbitrum One). The same address is never assumed to share the same contract bytecode, purpose, or state across different chains.
+- **Evidence-Backed Notes**: Attach source URLs and page titles to keep your supporting evidence distinct from your conclusions.
+- **Confidence-Aware Research**: Classify notes as `unverified`, `likely`, or `confirmed`. "Confirmed" represents your personal assessment, never an official platform verification.
+- **Local-First & Private**: Records are stored strictly on your device in IndexedDB. No accounts, no cloud sync, no analytics, and no remote telemetry.
+- **Portable Backups**: Export your entire research library to a versioned JSON backup and re-import anytime with strict all-or-nothing validation.
 
-- **Evidence-backed notes.** Every attribution can keep its source links, separate from your conclusion.
-- **Confidence-aware research.** Mark a claim as unverified, likely, or confirmed so facts stay distinct from hypotheses. "Confirmed" is always shown as your own assessment, never as an official platform verification.
-- **Local-first ownership.** Records stay on your device. There is no account and no cloud sync. Export and re-import the full library anytime.
-- **Consistent workflow across explorers.** The same research workflow applies on Etherscan, BaseScan, PolygonScan, BscScan and Arbiscan; a record is tied to its chain.
+### How It Works
 
-How it works:
+1. **Explorers**: Open any supported block explorer (Etherscan, BaseScan, PolygonScan, BscScan, Arbiscan). TraceMemo automatically identifies addresses and displays your private labels.
+2. **Generic Web Pages**: Click the extension toolbar icon to scan any web page on demand (`activeTab`).
+3. **Always-Scan Sites**: Enable "Always scan this site" in the side panel for trusted domains to automatically scan on every visit.
+4. **Side Panel**: Open the side panel to view detected addresses on the current page, manage your research library, or edit records.
 
-1. Open an Etherscan or BaseScan page and click the toolbar icon to open the side panel.
-2. On the Current Page tab, pick a detected address and save context for it. The current page is offered as the default source.
-3. TraceMemo shows a small private label beside matching addresses on the same chain. Click a label to open the record.
+### Privacy & Data Ownership
 
-Privacy:
-
-- Records are stored only on your device (IndexedDB), one global record per address with per-chain contexts. No analytics, no advertising, no remote error reporting, no backend.
-- TraceMemo never connects a wallet, requests signatures, sends transactions, reads balances, or makes RPC calls.
-- The extension auto-runs on 5 explorer sites (Etherscan, BaseScan, PolygonScan, BscScan, Arbiscan). On other websites, it scans on-demand when you click the toolbar (activeTab), with optional per-site enable.. It does not request `<all_urls>` or broad host access.
-- Exported backups are plaintext JSON, not encrypted. Store them securely. Deleting the extension or clearing browser data may permanently delete records.
-
-Data control:
-
-- Export all records to a versioned JSON backup.
-- Import a TraceMemo backup (10 MB max). Every record is validated; one invalid record rejects the whole file.
-- Clear all records after an explicit confirmation, with a backup offered first.
+- **100% Local Storage**: Your research notes remain on your device.
+- **No Wallet Integration**: TraceMemo is strictly a research and note-taking tool. It never connects to `window.ethereum`, never touches private keys or seed phrases, never requests signatures, and makes no RPC calls.
+- **No Analytics / No Backend**: Zero network requests are made to developer servers.
+- **Permission Transparency**: Broad host permissions (`<all_urls>`) are declared solely as an optional capability and are never active by default. Permissions for generic sites are requested on a per-origin basis only when you enable "Always scan this site".
 
 ## Category
 
@@ -46,29 +41,26 @@ Productivity / Developer Tools
 
 ## Languages
 
-English
+- English (Default)
+- 简体中文 (Simplified Chinese)
 
-## Single purpose
+## Single Purpose Description
 
-Attach private, source-backed, chain-aware research notes to EVM addresses and restore that context when the address appears again on Etherscan or BaseScan.
+Attach private, evidence-backed research notes to EVM addresses and restore that context when the address appears again across block explorers and web pages.
 
-## Permission justification
+## Permission Justifications
 
-- `storage`: store research records and preferences locally
-- `activeTab`: temporarily scan the current page when you click the toolbar (any website)
-- `scripting`: inject the EVM scanner into the current tab on demand on the device, and hold per-tab page context in session storage.
-- `sidePanel`: provide the side panel as the extension's primary interface.
-- Host permissions for `etherscan.io` and `basescan.org`: detect addresses on those pages and display your private labels beside them.
+- `storage`: Persist research records locally in IndexedDB, settings in `chrome.storage.local`, and per-tab page context in `chrome.storage.session`.
+- `sidePanel`: Provide the side panel as the extension's primary workspace.
+- `activeTab`: Temporarily inspect and scan the active tab for EVM addresses when you click the extension toolbar icon.
+- `scripting`: Inject the address scanner on demand upon user interaction, and manage dynamic content script registration for user-enabled Always-scan sites.
+- Host permissions (`etherscan.io`, `basescan.org`, `polygonscan.com`, `bscscan.com`, `arbiscan.io`): Automatically detect addresses and render private labels on supported block explorers.
+- Optional host permissions (`<all_urls>`): Used only on a per-origin basis when you explicitly enable "Always scan this site" for a particular website.
 
-TraceMemo uses `optional_host_permissions: <all_urls>` only when you explicitly enable "Always enable on this site" for a specific website. It does not request `tabs`, `scripting`, `cookies`, `history`, `webRequest`, or `clipboardRead`. It uses `chrome.tabs.query`/`onActivated`/`onRemoved` without the `tabs` permission only to read the active tab id and clean up per-tab state.
+TraceMemo does not request `tabs`, `cookies`, `history`, `webRequest`, `clipboardRead`, or default `<all_urls>` access.
 
-## Data use disclosure (Chrome Web Store Privacy Practices)
+## Chrome Web Store Privacy Practices Disclosure
 
-- Data collected: none is transmitted off the device. Records, settings, and per-tab page context are processed and stored locally.
-- Data used: addresses, chain id, page URL/title, labels, notes, confidence, source URL/title, and settings - all for the core on-device research workflow.
-- No authentication, no personal communications, no financial data, no authentication credentials are collected or transmitted.
-- No analytics or crash reporting is sent to the developer.
-
-## Not a wallet
-
-TraceMemo is a research and note-taking tool. It is not a wallet, does not custody assets, and cannot send transactions or interact with smart contracts.
+- **Data Collection**: No user data, research notes, addresses, or browsing history is transmitted off the device.
+- **Data Usage**: Addresses, URLs, and research notes are processed locally solely for the extension's core note-taking and address-labeling functionality.
+- **Authentication & Financial Info**: No authentication credentials, passwords, private keys, or financial transaction data are collected, stored, or processed.
