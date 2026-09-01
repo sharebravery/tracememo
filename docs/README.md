@@ -1,6 +1,6 @@
 # TraceMemo Development Specification
 
-> Start here. This directory is the single handoff package for an AI coding agent.
+> Reference documentation for the TraceMemo Chrome Extension project.
 
 ## 1. Product
 
@@ -8,78 +8,28 @@
 **Repository slug:** `tracememo`  
 **Tagline:** Private context for every onchain address.
 
-TraceMemo is a local-first Chrome extension for Web3 researchers. It lets a user attach a private label, note, confidence level, and source to an EVM address, then restores that context when the address appears again on supported block explorers.
+TraceMemo is a local-first Chrome extension for Web3 researchers. It lets a user attach private labels, tags, a global note, and independent chain context (chain-level note, confidence level, and source links) to EVM addresses across block explorers and web pages, and restores that context when the address appears again.
 
-The name is a working public name, not a completed trademark clearance. Before Chrome Web Store submission, repeat checks for product names, domains, social handles, and relevant trademarks.
+## 2. Core Principles & Architecture
 
-## 2. Required project base
+- **Single Global Record**: One unified record per canonical address key (`evm:<address>`) holding a shared label, tags, and global note.
+- **Independent Chain Contexts**: Known block explorers provide chain-specific context (note, confidence, sources) without assuming contracts or addresses behave identically across chains.
+- **Supported Explorers**:
+  - Etherscan (`etherscan.io`, Ethereum Mainnet, chain id 1)
+  - BaseScan (`basescan.org`, Base, chain id 8453)
+  - PolygonScan (`polygonscan.com`, Polygon, chain id 137)
+  - BscScan (`bscscan.com`, BNB Smart Chain, chain id 56)
+  - Arbiscan (`arbiscan.io`, Arbitrum One, chain id 42161)
+- **Generic Page Scanning**: On-demand EVM address scanning via toolbar action (`activeTab` + `scripting`). Generic pages display global records without guessing a chain.
+- **Always-Scan Permissions**: Explicit per-origin opt-in via optional host permissions.
+- **Local-First**: All data is stored in IndexedDB on the device. No servers, no accounts, no cloud sync, no telemetry.
+- **No Wallet Interaction**: No `window.ethereum`, no private keys or seed phrases, no signatures, and no RPC calls.
 
-Use this repository as the codebase template:
+## 3. Documentation Structure
 
-- Repository: `Jonghakseo/chrome-extension-boilerplate-react-vite`
-- Pinned commit: `6fde1ace754505c3dc7b7df48d1a619e12aa42c4`
-- Template version: `0.5.0`
-
-The upstream repository is archived. Fork or copy the pinned commit into the TraceMemo repository. Do not track upstream `main` automatically. Use the Node.js and pnpm versions already available in the local development environment; do not install, switch, or pin toolchain versions as part of this project.
-
-## 3. Source-of-truth order
-
-Read and follow the files in this exact order:
-
-1. `01-PRD.md` — what to build and what not to build.
-2. `02-TECHNICAL-ARCHITECTURE.md` — exact architecture, packages, paths, permissions, and data flow.
-3. `03-IMPLEMENTATION-PLAN.md` — the only approved implementation sequence.
-
-When documents conflict, use this priority:
-
-1. MVP exclusions and security rules in the PRD;
-2. exact technical decisions in the architecture document;
-3. milestone details in the implementation plan.
-
-Do not invent a fourth architecture.
-
-## 4. Non-negotiable MVP rules
-
-- Chrome and Chromium only.
-- EVM addresses only.
-- Etherscan and BaseScan only.
-- Local-first; no account and no backend.
-- No wallet connection.
-- No private keys, seed phrases, signatures, transactions, balances, or RPC calls.
-- No `<all_urls>`.
-- No remote JavaScript.
-- No analytics.
-- No payment system.
-- No generic scanning of arbitrary websites.
-- No team, graph, monitoring, AI attribution, or public label database.
-
-## 5. Required development order
-
-Implement one milestone at a time:
-
-1. Template cleanup and build baseline.
-2. Local record CRUD in the side panel.
-3. Etherscan detection and inline context.
-4. BaseScan support plus source and confidence workflow.
-5. Import/export, privacy copy, tests, and release ZIP.
-
-Do not start the next milestone until the current milestone acceptance criteria pass.
-
-## 6. Required AI completion report
-
-At the end of every coding task, report only:
-
-1. Scope completed;
-2. files changed;
-3. commands and test results;
-4. acceptance criteria status;
-5. permission changes;
-6. known limitation;
-7. next smallest task.
-
-## 7. Package contents
-
-- `01-PRD.md`
-- `02-TECHNICAL-ARCHITECTURE.md`
-- `03-IMPLEMENTATION-PLAN.md`
-
+1. `01-PRD.md` — Product requirements, user flows, and scope boundaries.
+2. `02-TECHNICAL-ARCHITECTURE.md` — Technical architecture, monorepo structure, message protocols, and security rules.
+3. `03-IMPLEMENTATION-PLAN.md` — Implementation milestones and development history.
+4. `RELEASE-CHECKLIST.md` — Release hardening and manual verification checklist.
+5. `privacy.md` — Privacy policy and permission disclosures.
+6. `store-listing.md` — Chrome Web Store listing metadata and store disclosures.

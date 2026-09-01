@@ -1,4 +1,4 @@
-<!-- Note: Please ensure your PR is targeting the `dev` branch -->
+<!-- Note: Please ensure your PR is targeting the `main` branch -->
 
 <!-- Describe what this PR is for in the title. -->
 

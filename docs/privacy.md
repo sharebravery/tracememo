@@ -1,64 +1,60 @@
 # TraceMemo Privacy Notice
 
-> Version: 1.1 · Date: 2026-08-05
+> Version: 1.2 · Date: 2026-09-01
 
-TraceMemo is a local-first Chrome extension that lets you attach a private label, note, confidence level, and source links to EVM addresses you research on Etherscan (Ethereum Mainnet) and BaseScan (Base).
+TraceMemo is a local-first Chrome extension for Web3 researchers. It lets you attach private labels, tags, notes, confidence levels, and source links to EVM addresses you encounter on block explorers and across the web.
 
-## Data processed locally
+## Data Processed Locally
 
-The extension processes the following data, all on your device:
+All data processing occurs locally on your device:
 
-- EVM addresses and their **chain id** (1 for Ethereum Mainnet, 8453 for Base).
-- The page URL and page title of supported explorer pages you visit.
-- Your labels, notes, and confidence levels.
-- Source URLs and source titles you add to a record.
-- Settings (annotation toggle, onboarding-seen flag).
+- EVM addresses detected on allowed or user-scanned pages.
+- Chain context (chain id, note, confidence, sources) on recognized block explorers.
+- The page URL and page title of scanned pages.
+- Your custom labels, tags, notes, confidence assessments, and source links.
+- Extension preferences (annotation display toggle, onboarding state, always-scan origin list).
 
-## What stays on your device
+## What Stays on Your Device
 
-- Every record you create is stored in your browser's IndexedDB **on this device only**, under a global address key (`evm:<address>`). One record per address holds a shared label, tags, and global note, plus independent per-chain contexts (chain-level note, confidence, sources). The shared label is the same across Ethereum Mainnet and Base; the chain-level note, confidence, and sources are not.
-- Small preferences are stored in `chrome.storage.local` on this device.
-- Page context (detected addresses, URL, title) is held in `chrome.storage.session` **per tab** and is cleared when the tab closes or the browser exits.
-- TraceMemo has **no account, no sign-in, no cloud sync, and no backend server**. There is nowhere for your records to be transmitted.
+- **Research Library (IndexedDB)**: Every record you create is stored in your browser's IndexedDB on this device only, under the global address key `evm:<address>`. Each record holds a shared label, tags, and global note, plus independent per-chain contexts (chain-level note, confidence, sources).
+- **Settings (`chrome.storage.local`)**: Extension preferences and the list of user-enabled always-scan origins are stored locally.
+- **Per-Tab Page Context (`chrome.storage.session`)**: Detected addresses, page URL, and page title for an active tab are held in memory-backed session storage and deleted when the tab closes or the browser exits.
+- **No Cloud Transmission**: TraceMemo has no user accounts, no sign-in, no cloud sync, and no backend servers. Your records and notes are never transmitted over the network.
 
-## What the extension does not do
+## What TraceMemo Does Not Do
 
-- It does **not** connect to `window.ethereum` or any wallet.
-- It does **not** request signatures, build or send transactions, or read balances, tokens, or transaction history.
-- It does **not** make RPC calls to any blockchain node.
+- It does **not** connect to `window.ethereum` or any crypto wallet.
+- It does **not** handle private keys or seed phrases, request signatures, or execute transactions.
+- It does **not** query balances, tokens, or transaction history via RPC.
 - It does **not** use cookies, browsing history, webRequest, or clipboard-read permissions.
-- It does **not** load executable code from a remote server.
-- It does **not** include advertising, analytics, or remote error-reporting SDKs, and does **not** transmit analytics or telemetry.
+- It does **not** load remote scripts or executable code.
+- It does **not** include analytics, telemetry, tracking, or remote error reporting.
 
-## Permissions requested
+## Permissions Requested
 
-| Permission | Why |
+| Permission | Purpose |
 |---|---|
-| `storage` | Persist records (IndexedDB) and small settings; per-tab page context (`chrome.storage.session`). |
-| `sidePanel` | Open the side panel as the primary UI. |
-| `activeTab` | Temporarily scan the current page when you click the toolbar (any website). |
-| `scripting` | Inject the EVM scanner into the current tab on demand. |
-| Host access to 5 explorers | Auto-detect addresses on Etherscan, BaseScan, PolygonScan, BscScan, Arbiscan. |
-| `optional_host_permissions: <all_urls>` | Used only when you explicitly enable "Always enable on this site" for a specific website. |
+| `storage` | Store research records in IndexedDB, settings in `chrome.storage.local`, and per-tab page context in `chrome.storage.session`. |
+| `sidePanel` | Display the side panel as the extension's primary user interface. |
+| `activeTab` | Temporarily access and scan the active tab when you click the extension toolbar icon. |
+| `scripting` | Inject the EVM address scanner on demand upon user interaction, and manage dynamic content script registration for user-enabled Always-scan sites. |
+| Host permissions for 5 explorers | Automatically detect addresses and display private labels on `etherscan.io`, `basescan.org`, `polygonscan.com`, `bscscan.com`, and `arbiscan.io`. |
+| `optional_host_permissions: ['<all_urls>']` | Declared solely as an optional capability. Host permissions are requested on a per-origin basis only when you explicitly enable "Always scan this site". |
 
-The manifest requests `activeTab` and `scripting` for on-demand page scanning. `<all_urls>` appears only in `optional_host_permissions` (user must explicitly grant per-site). The manifest does **not** request `tabs`, `cookies`, `history`, `webRequest`, `clipboardRead`, or any broad host access. `chrome.tabs.query`/`onActivated`/`onRemoved` are used without the `tabs` permission (only the active tab id is read; page URLs/titles come from the content script on supported pages).
+The manifest does **not** request `tabs`, `cookies`, `history`, `webRequest`, `clipboardRead`, or default broad host access.
 
-## User-generated labels
+## User-Generated Labels & Confidence
 
-Labels and confidence levels you assign are your own private notes. They are not platform verifications. The UI always marks user labels as "Private" and clarifies that confidence is your own assessment. A "Confirmed" label is never presented as an official verification.
+Labels, tags, and confidence assessments are your own private research notes. They are never official platform verifications or identity attestations. The UI marks user annotations as "Private" and reminds you that confidence levels reflect personal research assessments.
 
-## Data export, import, and deletion
+## Data Export, Import, and Deletion
 
-- From **Settings -> Backup & data** you can export all records to a versioned JSON file.
-- You can import a TraceMemo JSON file (10 MB maximum). Import is all-or-nothing: every record is validated first, and a single invalid record rejects the whole file with no writes. Conflicts keep the record with the newer `updatedAt`.
-- You can clear all records after an explicit confirmation. A backup download is offered before clearing.
-- **Deleting the extension or clearing browser data may permanently delete your records.** Export a backup first if you want to keep them.
-- **The exported JSON is a plaintext file, not an encrypted backup.** Anyone with the file can read it. Store exports securely.
+- **Export**: Export all records at any time from **Settings -> Backup & data** to a versioned JSON file.
+- **Plaintext Warning**: Exported backup files are unencrypted plaintext. Store them in a secure location.
+- **Import**: Import a TraceMemo JSON backup file (up to 10 MB). Import is all-or-nothing: the entire file is validated upfront, and any invalid record causes the entire import to be rejected without modifying existing data.
+- **Clear Data**: Delete all local records at any time after an explicit confirmation. A backup download is offered prior to deletion.
+- **Data Persistence**: Clearing browser storage or uninstalling the extension will delete locally stored IndexedDB data. Export a backup before doing so.
 
-## Service worker lifecycle
+## Changes to this Notice
 
-The background service worker may stop between events. Records are always read from IndexedDB on demand, so no data is lost when the worker restarts.
-
-## Changes to this notice
-
-Behavior changes that affect privacy will update this document. TraceMemo does not auto-update privacy-relevant behavior without a new version.
+Any functional changes affecting privacy or permissions will be reflected in updates to this document and release notes.

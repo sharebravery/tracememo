@@ -219,6 +219,9 @@ const manifest = {
   host_permissions: [
     'https://etherscan.io/*',
     'https://basescan.org/*',
+    'https://polygonscan.com/*',
+    'https://bscscan.com/*',
+    'https://arbiscan.io/*',
   ],
   background: {
     service_worker: 'background.js',
@@ -226,9 +229,17 @@ const manifest = {
   },
   action: {
     default_title: '__MSG_openSidePanel__',
-    default_icon: 'icon-34.png',
+    default_icon: {
+      '16': 'icon-16.png',
+      '32': 'icon-32.png',
+      '48': 'icon-48.png',
+      '128': 'icon-128.png',
+    },
   },
   icons: {
+    '16': 'icon-16.png',
+    '32': 'icon-32.png',
+    '48': 'icon-48.png',
     '128': 'icon-128.png',
   },
   content_scripts: [
@@ -236,6 +247,9 @@ const manifest = {
       matches: [
         'https://etherscan.io/*',
         'https://basescan.org/*',
+        'https://polygonscan.com/*',
+        'https://bscscan.com/*',
+        'https://arbiscan.io/*',
       ],
       js: ['content/all.iife.js'],
       run_at: 'document_idle',
@@ -250,10 +264,8 @@ const manifest = {
 ### 5.1 Forbidden manifest entries
 
 MVP manifest must not contain:
-
-- `<all_urls>`;
+- `<all_urls>` in default `host_permissions` or `content_scripts`;
 - `tabs`;
-- `scripting`;
 - `notifications`;
 - `cookies`;
 - `history`;
@@ -277,10 +289,10 @@ No popup fallback is required for MVP.
 
 ### 6.1 Canonical identity
 
-MVP supports two chains: Ethereum Mainnet (id 1) and Base (id 8453). One global record per EVM address holds a shared label/tags/note plus independent per-chain contexts.
+TraceMemo supports EVM addresses globally, with built-in chain context for Ethereum Mainnet (1), Base (8453), Polygon (137), BNB Smart Chain (56), and Arbitrum One (42161). One global record per EVM address holds a shared label/tags/note plus independent per-chain contexts.
 
 ```ts
-export type SupportedChainId = 1 | 8453;
+export type SupportedChainId = 1 | 8453 | 137 | 56 | 42161;
 export type EvmAddress = `0x${string}`;
 export type AddressKey = `evm:${string}`;
 ```
@@ -290,9 +302,9 @@ Rules:
 - validate with viem `isAddress`;
 - display checksum address using viem `getAddress`;
 - canonical global key is `evm:${address.toLowerCase()}` - one record per address; the chain id is NOT part of the key;
-- each record stores per-chain contexts (chainId, chain-level note, confidence, sources); the same address on Ethereum Mainnet and Base shares the global label/tags/note but NOT the chain-level note, confidence, or sources;
+- each record stores per-chain contexts (chainId, chain-level note, confidence, sources); the same address across different explorers shares the global label/tags/note but NOT the chain-level note, confidence, or sources;
 - the same address is not assumed to have the same contract code, purpose, or state across chains;
-- Etherscan maps to chain id 1; BaseScan maps to chain id 8453.
+- Etherscan maps to 1, BaseScan to 8453, PolygonScan to 137, BscScan to 56, Arbiscan to 42161.
 
 ### 6.2 Record types
 
@@ -476,18 +488,20 @@ Never include stack traces or user record content in production error messages.
 
 ### 8.2 Sender authorization
 
-Every message is schema-validated AND authorized by sender. `sender.id` must equal `chrome.runtime.id`. Content scripts (a real `sender.tab.id` and a `sender.tab.url` on etherscan.io/basescan.org) may only send `PAGE_CONTEXT_SET`, `RECORDS_GET_MANY`, and `OPEN_RECORD`. The side panel (`sender.url` under the extension's own side-panel URL) may send record CRUD, import/export, clear, settings, `PAGE_CONTEXT_GET`, and `RECORDS_GET_MANY`. Content scripts may not call `DATA_IMPORT`, `DATA_CLEAR`, `DATA_EXPORT`, or any write outside the current page. `PAGE_CONTEXT_SET` always uses `sender.tab.id`; client-supplied tab ids are ignored.
+Every message is schema-validated AND authorized by sender. `sender.id` must equal `chrome.runtime.id`. Content scripts (a real `sender.tab.id` and an allowed `sender.tab.url`) may only send `PAGE_CONTEXT_SET`, `RECORDS_GET_MANY`, and `OPEN_RECORD`. The side panel (`sender.url` under the extension's own side-panel URL) may send record CRUD, import/export, clear, settings, `PAGE_CONTEXT_GET`, and `RECORDS_GET_MANY`. Content scripts may not call `DATA_IMPORT`, `DATA_CLEAR`, `DATA_EXPORT`, or any write outside the current page. `PAGE_CONTEXT_SET` always uses `sender.tab.id`; client-supplied tab ids are ignored.
 
 ### 8.1 Per-tab page context
 
 The content script sends a `PageContextInput` after initial scan and meaningful DOM changes. The background takes the real tab id from `MessageSender.tab.id` and never trusts client-supplied tab ids:
 
 ```ts
+export type SiteId = 'etherscan' | 'basescan' | 'polygonscan' | 'bscscan' | 'arbiscan';
+
 interface PageContextInput {
   tabUrl: string;
   pageTitle: string;
-  site: 'etherscan' | 'basescan';
-  chainId: SupportedChainId;
+  site?: SiteId;
+  chainId?: SupportedChainId;
   addressKeys: AddressKey[];
   primaryAddressKey?: AddressKey;
   observedAt: string;
@@ -508,7 +522,7 @@ The background stores page context per tab in `chrome.storage.session` under `tr
 
 ```ts
 interface ExplorerSite {
-  id: 'etherscan' | 'basescan';
+  id: SiteId;
   hostname: string;
 }
 ```

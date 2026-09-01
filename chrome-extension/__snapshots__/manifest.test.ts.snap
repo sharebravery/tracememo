@@ -60,6 +60,6 @@ exports[`TraceMemo manifest > matches the baseline snapshot 1`] = `
   "side_panel": {
     "default_path": "side-panel/index.html",
   },
-  "version": "0.5.0",
+  "version": "0.1.0",
 }
 `;
